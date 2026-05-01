@@ -112,7 +112,7 @@ function loadConfig(): AppConfig {
     geminiApiKey: geminiApiKeys[0],
     geminiApiKeys,
     proxyUrl: process.env.PROXY_URL || null,
-    amazonDomain: process.env.AMAZON_DOMAIN || "amazon.com.au",
+    amazonDomain: process.env.AMAZON_DOMAIN || "www.amazon.com.au",
     jbhifiDomain: process.env.JBHIFI_DOMAIN || "www.jbhifi.com.au",
     phonebotDomain: process.env.PHONEBOT_DOMAIN || "www.phonebot.com.au",
     koganDomain: process.env.KOGAN_DOMAIN || "www.kogan.com.au",

@@ -279,9 +279,10 @@
             const fieldMeta = {
                 "MAPPING_CATEGORY": { label: "Mapping Category", type: "select", options: ["MAPPING REFURBISHED", "MAPPING BRAND NEW", "MAPPING BRAND NEW Laptop", "MAPPING BRAND NEW Lens dan Camera"], hint: "Select the product mapping category rules to apply" },
                 "SCRAPER_TARGET": { label: "Scraper Target", type: "select", options: ["amazon", "jbhifi", "kogan", "phonebot", "reebelo", "backmarket", "mobileciti", "buymobile", "spectronic", "bestmobilephone", "scorptec", "centrecom", "digidirect", "georges"], hint: "Choose which website to scrape" },
-                "GEMINI_API_KEY": { label: "Gemini API Key", type: "password", hint: "Get this from Google AI Studio" },
+                "GEMINI_MODEL": { label: "Gemini Model", type: "select", options: ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-2.5-flash"], hint: "Select the AI model for matching (Default: gemini-1.5-flash)" },
+                "GEMINI_API_KEY": { label: "Gemini API Key", type: "text", hint: "Get this from Google AI Studio" },
                 "PROXY_URL": { label: "Proxy URL", type: "text", hint: "Optional. E.g., http://user:pass@host:port" },
-                "AMAZON_DOMAIN": { label: "Amazon Domain", type: "text", hint: "E.g., amazon.com.au" },
+                "AMAZON_DOMAIN": { label: "Amazon Domain", type: "text", hint: "E.g., www.amazon.com.au" },
                 "JBHIFI_DOMAIN": { label: "JB Hi-Fi Domain", type: "text", hint: "E.g., www.jbhifi.com.au" },
                 "REEBELO_DOMAIN": { label: "Reebelo Domain", type: "text", hint: "E.g., reebelo.com.au" },
                 "BACKMARKET_DOMAIN": { label: "Backmarket Domain", type: "text", hint: "E.g., www.backmarket.com.au" },
