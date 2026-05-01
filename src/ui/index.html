@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BXT-SCRAPPER Configuration</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --accent-glow: rgba(59, 130, 246, 0.5);
+            --input-bg: rgba(15, 23, 42, 0.6);
+            --success: #10b981;
+            --purple: #8b5cf6;
+            --purple-glow: rgba(139, 92, 246, 0.4);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body {
+            background-color: var(--bg-color);
+            background-image:
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.15) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex; justify-content: center; align-items: flex-start;
+            padding: 2rem;
+        }
+        .container { width: 100%; max-width: 800px; }
+        .header { text-align: center; margin-bottom: 2rem; }
+        .header h1 {
+            font-size: 2.5rem; font-weight: 700;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        .header p { color: var(--text-muted); font-size: 1.1rem; }
+        .card {
+            background: var(--card-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color); border-radius: 1.5rem;
+            padding: 2.5rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            margin-bottom: 1.5rem;
+        }
+        .card-title {
+            font-size: 1.3rem; font-weight: 600; margin-bottom: 1.5rem;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .card-title .icon { font-size: 1.4rem; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 0.5rem; color: #e2e8f0; }
+        .form-group input[type="text"],
+        .form-group input[type="password"],
+        .form-group input[type="number"] {
+            width: 100%; padding: 0.875rem 1rem;
+            background: var(--input-bg); border: 1px solid var(--border-color);
+            border-radius: 0.75rem; color: white; font-size: 1rem; transition: all 0.2s ease;
+        }
+        .form-group input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+        .form-group input::placeholder { color: #475569; }
+        .form-text { display: block; margin-top: 0.4rem; font-size: 0.8rem; color: var(--text-muted); }
+
+        /* Upload Zone */
+        .upload-zone {
+            border: 2px dashed rgba(139, 92, 246, 0.4); border-radius: 1rem;
+            padding: 2rem; text-align: center; cursor: pointer;
+            transition: all 0.3s ease; position: relative; overflow: hidden;
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--purple); background: rgba(139, 92, 246, 0.08);
+            transform: translateY(-2px);
+        }
+        .upload-zone .upload-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+        .upload-zone .upload-title { font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem; }
+        .upload-zone .upload-hint { font-size: 0.85rem; color: var(--text-muted); }
+        .upload-zone input[type="file"] { display: none; }
+        .upload-success {
+            border-color: var(--success) !important;
+            background: rgba(16, 185, 129, 0.08) !important;
+        }
+        .upload-success .upload-icon { color: var(--success); }
+        .file-info {
+            display: none; margin-top: 1rem; padding: 0.75rem 1rem;
+            background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 0.75rem; font-size: 0.9rem; color: var(--success);
+            align-items: center; justify-content: space-between;
+        }
+        .file-info.visible { display: flex; }
+        .file-info .file-name { font-weight: 500; }
+        .file-info .file-remove {
+            cursor: pointer; background: none; border: none; color: #ef4444;
+            font-size: 1.1rem; padding: 0 0.25rem; transition: transform 0.2s;
+        }
+        .file-info .file-remove:hover { transform: scale(1.2); }
+
+        /* Output Files */
+        .output-list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .output-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1rem 1.25rem; background: var(--input-bg);
+            border: 1px solid var(--border-color); border-radius: 0.75rem;
+            transition: all 0.2s ease;
+        }
+        .output-item:hover { border-color: rgba(255,255,255,0.2); transform: translateX(4px); }
+        .output-item-info { display: flex; align-items: center; gap: 0.75rem; }
+        .output-item-icon { font-size: 1.5rem; }
+        .output-item-name { font-weight: 500; font-size: 0.95rem; }
+        .output-item-size { font-size: 0.8rem; color: var(--text-muted); }
+        .btn-download {
+            padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.85rem;
+            font-weight: 600; cursor: pointer; border: none;
+            background: rgba(16, 185, 129, 0.15); color: var(--success);
+            transition: all 0.2s ease; text-decoration: none;
+        }
+        .btn-download:hover { background: rgba(16, 185, 129, 0.25); transform: translateY(-1px); }
+        .empty-state { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.95rem; }
+
+        /* Buttons */
+        .actions { display: flex; gap: 1rem; margin-top: 2.5rem; }
+        .btn {
+            padding: 0.875rem 1.5rem; border-radius: 0.75rem; font-size: 1rem;
+            font-weight: 600; cursor: pointer; transition: all 0.2s ease;
+            border: none; display: inline-flex; align-items: center; justify-content: center;
+        }
+        .btn-primary {
+            background: var(--accent); color: white; flex: 1;
+            box-shadow: 0 4px 14px 0 var(--accent-glow);
+        }
+        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59,130,246,0.6); }
+
+        #statusMessage {
+            margin-top: 1.5rem; padding: 1rem; border-radius: 0.75rem;
+            text-align: center; font-weight: 500; display: none; opacity: 0; transition: opacity 0.3s ease;
+        }
+        .status-success { background: rgba(16,185,129,0.1); color: var(--success); border: 1px solid rgba(16,185,129,0.2); display: block !important; opacity: 1 !important; }
+        .status-error { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); display: block !important; opacity: 1 !important; }
+        .status-running { background: rgba(59,130,246,0.1); color: var(--accent); border: 1px solid rgba(59,130,246,0.2); display: block !important; opacity: 1 !important; }
+
+        .spinner { width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: white; animation: spin 1s ease-in-out infinite; display: none; margin-right: 10px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading .spinner { display: inline-block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Configuration</h1>
+            <p>Set up your environment variables easily</p>
+        </div>
+
+        <!-- Input CSV Upload Card -->
+        <div class="card">
+            <div class="card-title"><span class="icon">📄</span> Input CSV File</div>
+            <div class="upload-zone" id="uploadZone">
+                <input type="file" id="csvFileInput" accept=".csv">
+                <div class="upload-icon">⬆️</div>
+                <div class="upload-title">Click or drag CSV file here</div>
+                <div class="upload-hint">Supports .csv files — this will be saved to the input folder</div>
+            </div>
+            <div class="file-info" id="fileInfo">
+                <span class="file-name" id="fileName"></span>
+                <button class="file-remove" id="fileRemove" title="Remove">✕</button>
+            </div>
+            <span class="form-text" id="currentInputFile"></span>
+            <div id="runAction" style="margin-top: 1.5rem; display: none;">
+                <div style="display: flex; gap: 10px;">
+                    <button id="runBtn" class="btn btn-primary" style="flex: 2; background: var(--purple); box-shadow: 0 4px 14px 0 var(--purple-glow);">
+                        <div class="spinner"></div>
+                        <span>🚀 Run Scraper Now</span>
+                    </button>
+                    <button id="stopBtn" class="btn" style="flex: 1; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); display: none;">
+                        <span>🛑 Stop</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Card -->
+        <div class="card">
+            <div class="card-title"><span class="icon">⚙️</span> Scraper Settings</div>
+            <form id="configForm">
+                <div id="dynamicFields">
+                    <div style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <div class="spinner" style="display: inline-block; border-top-color: #3b82f6;"></div>
+                        <p style="margin-top: 1rem;">Loading configuration...</p>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary" id="saveBtn">
+                        <div class="spinner"></div>
+                        <span>Save Configuration</span>
+                    </button>
+                </div>
+            </form>
+            <div id="statusMessage"></div>
+        </div>
+
+        <!-- Output Download Card -->
+        <div class="card">
+            <div class="card-title"><span class="icon">📦</span> Output Results</div>
+            <div class="output-list" id="outputList">
+                <div class="empty-state">Loading output files...</div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // === Upload Logic ===
+    const uploadZone = document.getElementById("uploadZone");
+    const csvFileInput = document.getElementById("csvFileInput");
+    const fileInfo = document.getElementById("fileInfo");
+    const fileName = document.getElementById("fileName");
+    const fileRemove = document.getElementById("fileRemove");
+    const stopBtn = document.getElementById("stopBtn");
+    let selectedFile = null;
+
+    uploadZone.addEventListener("click", () => csvFileInput.click());
+    uploadZone.addEventListener("dragover", (e) => { e.preventDefault(); uploadZone.classList.add("dragover"); });
+    uploadZone.addEventListener("dragleave", () => uploadZone.classList.remove("dragover"));
+    uploadZone.addEventListener("drop", (e) => {
+        e.preventDefault(); uploadZone.classList.remove("dragover");
+        const file = e.dataTransfer.files[0];
+        if (file && file.name.endsWith(".csv")) handleFileSelected(file);
+    });
+    csvFileInput.addEventListener("change", (e) => {
+        if (e.target.files[0]) handleFileSelected(e.target.files[0]);
+    });
+
+    function handleFileSelected(file) {
+        selectedFile = file;
+        fileName.textContent = file.name + " (" + (file.size / 1024).toFixed(1) + " KB)";
+        fileInfo.classList.add("visible");
+        uploadZone.classList.add("upload-success");
+        uploadZone.querySelector(".upload-title").textContent = "File selected!";
+        // Auto-upload
+        uploadFile(file);
+    }
+
+    fileRemove.addEventListener("click", () => {
+        selectedFile = null; csvFileInput.value = "";
+        fileInfo.classList.remove("visible");
+        uploadZone.classList.remove("upload-success");
+        uploadZone.querySelector(".upload-title").textContent = "Click or drag CSV file here";
+    });
+
+    async function uploadFile(file) {
+        const formData = new FormData();
+        formData.append("file", file);
+        try {
+            const res = await fetch("/api/upload-csv", { method: "POST", body: formData });
+            const data = await res.json();
+            if (data.success) {
+                uploadZone.querySelector(".upload-title").textContent = "Uploaded successfully!";
+                document.getElementById("currentInputFile").textContent = "Current: " + data.savedPath;
+                document.getElementById("runAction").style.display = "block";
+            }
+        } catch (err) {
+            uploadZone.querySelector(".upload-title").textContent = "Upload failed!";
+            uploadZone.classList.remove("upload-success");
+        }
+    }
+
+    // === Config Form Logic ===
+    document.addEventListener("DOMContentLoaded", async () => {
+        // Load env config
+        try {
+            const response = await fetch("/api/env");
+            const data = await response.json();
+            const formContainer = document.getElementById("dynamicFields");
+            formContainer.innerHTML = "";
+
+            const fieldMeta = {
+                "MAPPING_CATEGORY": { label: "Mapping Category", type: "select", options: ["MAPPING REFURBISHED", "MAPPING BRAND NEW", "MAPPING BRAND NEW Laptop", "MAPPING BRAND NEW Lens dan Camera"], hint: "Select the product mapping category rules to apply" },
+                "SCRAPER_TARGET": { label: "Scraper Target", type: "select", options: ["amazon", "jbhifi", "kogan", "phonebot", "reebelo", "backmarket", "mobileciti", "buymobile", "spectronic", "bestmobilephone", "scorptec", "centrecom", "digidirect", "georges"], hint: "Choose which website to scrape" },
+                "GEMINI_API_KEY": { label: "Gemini API Key", type: "password", hint: "Get this from Google AI Studio" },
+                "PROXY_URL": { label: "Proxy URL", type: "text", hint: "Optional. E.g., http://user:pass@host:port" },
+                "AMAZON_DOMAIN": { label: "Amazon Domain", type: "text", hint: "E.g., amazon.com.au" },
+                "JBHIFI_DOMAIN": { label: "JB Hi-Fi Domain", type: "text", hint: "E.g., www.jbhifi.com.au" },
+                "REEBELO_DOMAIN": { label: "Reebelo Domain", type: "text", hint: "E.g., reebelo.com.au" },
+                "BACKMARKET_DOMAIN": { label: "Backmarket Domain", type: "text", hint: "E.g., www.backmarket.com.au" },
+                "MOBILECITI_DOMAIN": { label: "Mobileciti Domain", type: "text", hint: "E.g., www.mobileciti.com.au" },
+                "BUYMOBILE_DOMAIN": { label: "BuyMobile Domain", type: "text", hint: "E.g., buymobile.com.au" },
+                "SPECTRONIC_DOMAIN": { label: "Spectronic Domain", type: "text", hint: "E.g., spectronic.com.au" },
+                "BESTMOBILEPHONE_DOMAIN": { label: "BestMobilePhone Domain", type: "text", hint: "E.g., bestmobilephone.com.au" },
+                "SCORPTEC_DOMAIN": { label: "Scorptec Domain", type: "text", hint: "E.g., www.scorptec.com.au" },
+                "CENTRECOM_DOMAIN": { label: "Centre Com Domain", type: "text", hint: "E.g., www.centrecom.com.au" },
+                "DIGIDIRECT_DOMAIN": { label: "Digidirect Domain", type: "text", hint: "E.g., www.digidirect.com.au" },
+                "GEORGES_DOMAIN": { label: "Georges Domain", type: "text", hint: "E.g., www.georges.com.au" },
+                "REQUEST_DELAY_MIN_MS": { label: "Minimum Request Delay (ms)", type: "number", hint: "E.g., 3000" },
+                "REQUEST_DELAY_MAX_MS": { label: "Maximum Request Delay (ms)", type: "number", hint: "E.g., 8000" },
+                "MAX_SEARCH_RESULTS": { label: "Max Search Results", type: "number", hint: "Number of results to analyze per product" },
+                "KOGAN_DOMAIN": { label: "Kogan Domain", type: "text", hint: "E.g., www.kogan.com.au" },
+                "PHONEBOT_DOMAIN": { label: "Phonebot Domain", type: "text", hint: "E.g., www.phonebot.com.au" }
+            };
+            // Skip INPUT_CSV_PATH and OUTPUT_DIR — handled by upload/download cards
+            const skipKeys = ["INPUT_CSV_PATH", "OUTPUT_DIR"];
+            const allKeys = [...new Set([...Object.keys(data.example), ...Object.keys(data.current)])];
+
+            allKeys.forEach(key => {
+                if (skipKeys.includes(key)) return;
+                const value = data.current[key] !== undefined ? data.current[key] : data.example[key] || "";
+                const meta = fieldMeta[key] || { label: key, type: "text", hint: "" };
+                const group = document.createElement("div");
+                group.className = "form-group";
+                const label = document.createElement("label");
+                label.setAttribute("for", key);
+                label.textContent = meta.label;
+                
+                let input;
+                if (meta.type === "select") {
+                    input = document.createElement("select");
+                    input.style.width = "100%";
+                    input.style.padding = "0.875rem 1rem";
+                    input.style.background = "var(--input-bg)";
+                    input.style.border = "1px solid var(--border-color)";
+                    input.style.borderRadius = "0.75rem";
+                    input.style.color = "white";
+                    input.style.fontSize = "1rem";
+                    input.style.appearance = "none";
+                    
+                    meta.options.forEach(opt => {
+                        const option = document.createElement("option");
+                        option.value = opt;
+                        option.textContent = opt.charAt(0).toUpperCase() + opt.slice(1);
+                        if (opt === value) option.selected = true;
+                        input.appendChild(option);
+                    });
+                } else {
+                    input = document.createElement("input");
+                    input.type = meta.type;
+                    input.value = value;
+                    input.placeholder = "Enter " + meta.label;
+                }
+                
+                input.id = key;
+                input.name = key;
+                
+                group.appendChild(label);
+                group.appendChild(input);
+                if (meta.hint) {
+                    const hint = document.createElement("span");
+                    hint.className = "form-text";
+                    hint.textContent = meta.hint;
+                    group.appendChild(hint);
+                }
+                formContainer.appendChild(group);
+            });
+
+            // Show current input file
+            const currentInput = data.current["INPUT_CSV_PATH"] || data.example["INPUT_CSV_PATH"] || "";
+            if (currentInput) {
+                document.getElementById("currentInputFile").textContent = "Current: " + currentInput;
+                document.getElementById("runAction").style.display = "block";
+            }
+        } catch (error) {
+            document.getElementById("dynamicFields").innerHTML = '<p style="color: #ef4444;">Error loading configuration: ' + error.message + '</p>';
+        }
+
+        // Load output files
+        loadOutputFiles();
+
+        // Run Scraper Button
+        document.getElementById("runBtn").addEventListener("click", async () => {
+            const btn = document.getElementById("runBtn");
+            const status = document.getElementById("statusMessage");
+            btn.classList.add("loading");
+            btn.querySelector("span").textContent = "Starting Scraper...";
+            status.textContent = "Scraper started! Check your terminal for logs.";
+            status.className = "status-running";
+
+            try {
+                const res = await fetch("/api/run-scraper", { method: "POST" });
+                const data = await res.json();
+                if (data.success) {
+                    const targetLabel = (data.target || 'amazon').charAt(0).toUpperCase() + (data.target || 'amazon').slice(1);
+                    status.textContent = `Scraper started for ${targetLabel}! Check your terminal for logs.`;
+                    stopBtn.style.display = "block";
+                    setTimeout(() => {
+                        btn.classList.remove("loading");
+                        btn.querySelector("span").textContent = "🚀 Run Scraper Now";
+                    }, 2000);
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (err) {
+                status.textContent = "Failed to start scraper: " + err.message;
+                status.className = "status-error";
+                btn.classList.remove("loading");
+                btn.querySelector("span").textContent = "🚀 Run Scraper Now";
+            }
+        });
+
+        // Stop Scraper Button
+        stopBtn.addEventListener("click", async () => {
+            const status = document.getElementById("statusMessage");
+            stopBtn.disabled = true;
+            stopBtn.textContent = "Stopping...";
+            try {
+                const res = await fetch("/api/stop-scraper", { method: "POST" });
+                const data = await res.json();
+                if (data.success) {
+                    status.textContent = "Scraper stopped successfully.";
+                    status.className = "status-success";
+                    stopBtn.style.display = "none";
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (err) {
+                status.textContent = "Failed to stop scraper: " + err.message;
+                status.className = "status-error";
+            } finally {
+                stopBtn.disabled = false;
+                stopBtn.textContent = "🛑 Stop";
+            }
+        });
+    });
+
+    // === Save Config ===
+    document.getElementById("configForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById("saveBtn");
+        const status = document.getElementById("statusMessage");
+        btn.classList.add("loading");
+        btn.querySelector("span").textContent = "Saving...";
+        status.className = "";
+
+        const formData = new FormData(e.target);
+        const config = Object.fromEntries(formData.entries());
+
+        try {
+            const response = await fetch("/api/env", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(config)
+            });
+            if (response.ok) {
+                status.textContent = "Configuration saved successfully!";
+                status.className = "status-success";
+            } else {
+                throw new Error("Failed to save configuration");
+            }
+        } catch (error) {
+            status.textContent = error.message;
+            status.className = "status-error";
+        } finally {
+            btn.classList.remove("loading");
+            btn.querySelector("span").textContent = "Save Configuration";
+        }
+    });
+
+    // === Output Files ===
+    async function loadOutputFiles() {
+        const container = document.getElementById("outputList");
+        try {
+            const res = await fetch("/api/output-files");
+            const files = await res.json();
+            if (files.length === 0) {
+                container.innerHTML = '<div class="empty-state">No output files yet. Run the scraper first!</div>';
+                return;
+            }
+            container.innerHTML = "";
+            files.forEach(f => {
+                const item = document.createElement("div");
+                item.className = "output-item";
+                const info = document.createElement("div");
+                info.className = "output-item-info";
+                info.innerHTML = '<span class="output-item-icon">📊</span><div><div class="output-item-name">' + f.name + '</div><div class="output-item-size">' + f.size + '</div></div>';
+                const link = document.createElement("a");
+                link.className = "btn-download";
+                link.href = "/api/download/" + encodeURIComponent(f.name);
+                link.textContent = "Download";
+                link.download = f.name;
+                item.appendChild(info);
+                item.appendChild(link);
+                container.appendChild(item);
+            });
+        } catch (err) {
+            container.innerHTML = '<div class="empty-state">Failed to load output files.</div>';
+        }
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+{
+  "name": "bxt-scrapper",
+  "version": "1.0.0",
+  "description": "Amazon price scrapper for BecexTech product catalog",
+  "type": "module",
+  "bin": "dist/index.js",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
+    "bxt": "tsx src/fill-amazon-urls.ts",
+    "scrape": "tsx src/index.ts",
+    "scrape:dry-run": "tsx src/index.ts --dry-run",
+    "config": "tsx src/config-ui.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "package": "pkg . --targets node18-win-x64,node18-macos-x64 --out-path bin"
+  },
+  "pkg": {
+    "assets": [
+      ".env.example",
+      "src/ui/index.html"
+    ],
+    "outputPath": "bin"
+  },
+  "dependencies": {
+    "@google/genai": "^1.0.0",
+    "csv-parser": "^3.0.0",
+    "csv-writer": "^1.6.0",
+    "dotenv": "^16.4.7",
+    "p-queue": "^8.0.1",
+    "playwright": "^1.50.0",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "pkg": "^5.8.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
