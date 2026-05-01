@@ -73,8 +73,8 @@ export class AmazonSearchService {
       const isAlreadyOnAmazon = currentUrl.includes(this.amazonDomain);
 
       if (!isAlreadyOnAmazon) {
-        logger.info(`Visiting Amazon directly (https://${this.amazonDomain}/)...`);
-        const targetUrl = `https://${this.amazonDomain}/`;
+        logger.info(`Visiting Amazon directly (https://${this.amazonDomain}/australia/s?k=australia)...`);
+        const targetUrl = `https://${this.amazonDomain}/australia/s?k=australia`;
         
         await page.goto(targetUrl, {
           waitUntil: "domcontentloaded",
