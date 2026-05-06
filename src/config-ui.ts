@@ -9,15 +9,15 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = 3000;
+const PORT = 3003;
 const PROJECT_ROOT = process.cwd();
 const ENV_PATH = path.join(PROJECT_ROOT, '.env');
 const ENV_EXAMPLE_PATH = path.join(PROJECT_ROOT, '.env.example');
 const INPUT_DIR = path.join(PROJECT_ROOT, 'input');
 const OUTPUT_DIR = path.join(PROJECT_ROOT, 'output');
 const isPackaged = (process as any).pkg !== undefined;
-const HTML_PATH = isPackaged
-  ? path.resolve(__dirname, '../src/ui/index.html')
+const HTML_PATH = isPackaged 
+  ? path.resolve(__dirname, '../src/ui/index.html') 
   : path.join(__dirname, 'ui', 'index.html');
 
 // ── Helpers ──────────────────────────────────────────────
@@ -26,8 +26,8 @@ function openBrowser(url: string) {
   const platform = os.platform();
   const command =
     platform === 'win32' ? `start "" "${url}"` :
-      platform === 'darwin' ? `open "${url}"` :
-        `xdg-open "${url}"`;
+    platform === 'darwin' ? `open "${url}"` :
+    `xdg-open "${url}"`;
   exec(command);
 }
 
@@ -214,7 +214,7 @@ const server = http.createServer(async (req, res) => {
     if (method === 'POST' && url === '/api/env') return await handlePostEnv(req, res);
     if (method === 'POST' && url === '/api/upload-csv') return await handleUploadCsv(req, res);
     if (method === 'GET' && url === '/api/output-files') return await handleGetOutputFiles(res);
-
+    
     if (method === 'POST' && url === '/api/run-scraper') {
       if (currentScraperProcess) {
         return jsonResponse(res, { success: false, error: 'Scraper is already running' }, 400);
@@ -223,7 +223,7 @@ const server = http.createServer(async (req, res) => {
       const currentEnv = await parseEnvFile(ENV_PATH);
       const scraperTarget = (currentEnv['SCRAPER_TARGET'] || 'amazon').toLowerCase();
       const inputPath = currentEnv['INPUT_CSV_PATH'] || 'input/upload.csv';
-
+      
       // Determine which command to run based on SCRAPER_TARGET and CSV format.
       // `npm run bxt` (fill-amazon-urls.ts) is an Amazon-only URL filler for BXT-format CSVs.
       // `npm run scrape` (index.ts) is the main orchestrator that supports ALL targets.
@@ -234,16 +234,16 @@ const server = http.createServer(async (req, res) => {
           const fullInputPath = path.join(PROJECT_ROOT, inputPath);
           const fileContent = await fs.readFile(fullInputPath, 'utf-8');
           const firstLine = fileContent.split('\n')[0];
-
+          
           // Only use the BXT-specific Amazon filler when the CSV has the full BXT format
           if (firstLine && (firstLine.includes('Competitor #3 URL') || firstLine.includes('Harga AMAZON'))) {
-            commandToRun = 'npm run bxt';
+             commandToRun = 'npm run bxt';
           }
         } catch (e) {
-          console.warn("Could not read input CSV for format detection", e);
+           console.warn("Could not read input CSV for format detection", e);
         }
       }
-
+      
       console.log(`Executing: ${commandToRun} (target: ${scraperTarget})`);
       currentScraperProcess = exec(commandToRun, (error, stdout, stderr) => {
         currentScraperProcess = null;

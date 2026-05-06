@@ -223,7 +223,7 @@ export class GeminiMatcherService {
       try {
         const genAI = this.getGenAI();
         const response = await genAI.models.generateContent({
-          model: process.env.GEMINI_MODEL || "gemini-1.5-flash",
+          model: "gemini-2.0-flash",
           contents,
           config: {
             temperature: 0.1,

@@ -73,10 +73,11 @@ export class AmazonSearchService {
       const isAlreadyOnAmazon = currentUrl.includes(this.amazonDomain);
 
       if (!isAlreadyOnAmazon) {
-        logger.info(`Visiting Amazon directly (https://${this.amazonDomain}/australia/s?k=australia)...`);
-        const targetUrl = `https://${this.amazonDomain}/australia/s?k=australia`;
+        logger.info(`Visiting Amazon via organic Ad Link...`);
+        // Using an organic ad link ensures traffic appears human
+        const organicAdUrl = "https://www.google.com/aclk?sa=L&pf=1&ai=DChsSEwiVpOfmkoGUAxVTP4MDHaVDE2UYACICCAEQARoCc2Y&co=1&ase=2&gclid=CjwKCAjw46HPBhAMEiwASZpLRFOgApD-IWR4k1q4BveGWmORsDK5KJFV1k9upgntMCss8Fp47OOcURoCF9UQAvD_BwE&ei=FZXoab_QIoCZ4-EPqP7Z6Q4&cid=CAASugHkaPjHD4F0cVmMg6m0fEFK0W9RPXHkwGhbFCC-mE4Kj06hT4uBKi-qAIAZlQOMXQoHBCu71Cz2qe7_UAOkVfhoIVAQ-tmZMK_7sLS7SFE5ZSB3i9xpvxAprc9T8QejeGZb6XD3O_vBaU6f7hylXlbOIkwMU1CicJTzZPtgXjucEce-N2BuxIrpa59zPyEkghSfPwqvzHOljYigkgxfjQDnfYSkC4MQrB8VUIYqj9_i7O6GHkMQotv5Vn4&cce=2&category=acrcp_v1_32&sig=AOD64_3ae5FwiShnQku5FXygOZoa4wOBqw&q&sqi=2&nis=4&adurl=https://www.amazon.com.au/b?ie%3DUTF8%26node%3D8125191051%26gad_source%3D1%26gad_campaignid%3D22605646973%26gbraid%3D0AAAAA9f922JYFucfJtTsJ9gdPK5W7W1K7%26gclid%3DCjwKCAjw46HPBhAMEiwASZpLRFOgApD-IWR4k1q4BveGWmORsDK5KJFV1k9upgntMCss8Fp47OOcURoCF9UQAvD_BwE&ved=2ahUKEwj_ruHmkoGUAxWAzDgGHSh_Nu0Q0Qx6BAgNEAE";
         
-        await page.goto(targetUrl, {
+        await page.goto(organicAdUrl, {
           waitUntil: "domcontentloaded",
           timeout: 60000,
         });
@@ -182,7 +183,7 @@ export class AmazonSearchService {
   private async extractSearchResults(
     page: Page
   ): Promise<AmazonSearchResult[]> {
-    const results = await page.evaluate(([maxResults, domain]) => {
+    const results = await page.evaluate((maxResults: number) => {
       const searchResults: Array<{
         title: string;
         price: number | null;
@@ -200,7 +201,7 @@ export class AmazonSearchService {
       // Debug: log how many cards we found in total
       console.log(`[extractSearchResults] Found ${resultCards.length} raw cards`);
 
-      for (const card of Array.from(resultCards).slice(0, maxResults as number)) {
+      for (const card of Array.from(resultCards).slice(0, maxResults)) {
         // Skip sponsored
         const sponsored = card.querySelector('.puis-sponsored-label-info-icon, [data-component-type="sp-sponsored-result"]');
         if (sponsored) continue;
@@ -219,7 +220,7 @@ export class AmazonSearchService {
         // Extract URL
         const rawHref = linkEl.getAttribute("href") || "";
         if (!rawHref) continue;
-        const url = rawHref.startsWith("http") ? rawHref : `https://${domain}${rawHref}`;
+        const url = rawHref.startsWith("http") ? rawHref : `https://www.amazon.com.au${rawHref}`;
 
         // Extract price
         let price: number | null = null;
@@ -242,7 +243,7 @@ export class AmazonSearchService {
       }
 
       return searchResults;
-    }, [this.maxResults, this.amazonDomain]);
+    }, this.maxResults);
 
     return results;
   }

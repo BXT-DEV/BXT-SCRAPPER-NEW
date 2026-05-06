@@ -103,7 +103,13 @@ async function main() {
       logger.info(`${progress} Empty URL for: ${productName}. Searching...`);
       
       try {
-        // Set postcode and initial navigation is handled inside searchProduct now
+        // Ensure postcode is set on first visit to Amazon
+        if (isFirstAmazonLoad) {
+          logger.info("Visiting Amazon to set delivery postcode...");
+          await page.goto(`https://${config.amazonDomain}`, { waitUntil: "domcontentloaded" });
+          await searchService.setDeliveryPostcode(page);
+          isFirstAmazonLoad = false;
+        }
 
         const searchQuery = productName.replace(/\s*-\s*Brand New\s*$/i, "").replace(/[()"]/g, "").trim();
         const searchResults = await searchService.searchProduct(page, searchQuery);
