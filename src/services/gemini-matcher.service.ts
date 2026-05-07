@@ -298,8 +298,8 @@ export class GeminiMatcherService {
 
     // 3. Year Check (e.g., 2020, 2021, 2022, 2023, 2024)
     const yearPattern = /\b(201\d|202\d)\b/g;
-    const sourceYears = sourceName.match(yearPattern) || [];
-    const targetYears = targetTitle.match(yearPattern) || [];
+    const sourceYears: string[] = sourceName.match(yearPattern) ?? [];
+    const targetYears: string[] = targetTitle.match(yearPattern) ?? [];
     
     for (const year of sourceYears) {
       // If the target has a year mentioned, it MUST match the source year.
