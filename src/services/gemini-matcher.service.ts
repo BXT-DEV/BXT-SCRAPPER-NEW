@@ -138,8 +138,9 @@ CRITICAL MATCHING RULES:
 1. **STORAGE & COLOR ARE ABSOLUTE**: If the source says "Titanium Blue" and the result says "Titanium Grey", it is NOT a match. If the source says "1TB" and the result says "512GB", it is NOT a match.
 2. **EXACT KEYWORDS**: Look for exact matches for storage (e.g., 128GB, 256GB, 512GB, 1TB) and color names.
 3. **CONDITION MATCHING**: For Refurbished, ensure the condition maps correctly per the store-specific rules above.
-4. If multiple results match, pick the one that matches the title most closely.
-5. If none match or color/specs differ, set isMatch to false.
+4. **YEAR MATCHING**: If the source product specifies a release year (e.g., 2021, 2022, 2023), the matched result MUST be from the same year. Do NOT match a 2022 product with a 2023 listing.
+5. If multiple results match, pick the one that matches the title most closely.
+6. If none match or color/specs differ, set isMatch to false.
 
 Respond ONLY with a valid JSON object:
 {
@@ -207,7 +208,7 @@ export class GeminiMatcherService {
       .replace("{{SEARCH_RESULTS}}", formattedResults);
 
     const contents: any[] = [{ role: "user", parts: [{ text: promptText }] }];
-    
+
     if (screenshotBuffer) {
       contents[0].parts.push({
         inlineData: {
@@ -223,7 +224,7 @@ export class GeminiMatcherService {
       try {
         const genAI = this.getGenAI();
         const response = await genAI.models.generateContent({
-          model: "gemini-2.0-flash",
+          model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
           contents,
           config: {
             temperature: 0.1,
@@ -250,7 +251,7 @@ export class GeminiMatcherService {
 
         if (this.isQuotaError(err)) {
           logger.warn(`⚠️ Quota exceeded on key [${this.currentKeyIndex + 1}/${this.apiKeys.length}]: ${err.message}`);
-          
+
           if (this.rotateKey()) {
             logger.info(`Retrying with next key [${this.currentKeyIndex + 1}/${this.apiKeys.length}]...`);
             continue; // Retry immediately with new key
@@ -283,7 +284,7 @@ export class GeminiMatcherService {
     const commonColors = [
       "blue", "grey", "gray", "black", "white", "silver", "gold", "green", "pink", "purple", "violet", "orange", "yellow", "cream", "natural", "titanium"
     ];
-    
+
     for (const color of commonColors) {
       if (sourceLower.includes(color)) {
         if (!targetLower.includes(color)) {
@@ -292,6 +293,20 @@ export class GeminiMatcherService {
           if (color === "gray" && targetLower.includes("grey")) continue;
           return false;
         }
+      }
+    }
+
+    // 3. Year Check (e.g., 2020, 2021, 2022, 2023, 2024)
+    const yearPattern = /\b(201\d|202\d)\b/g;
+    const sourceYears = sourceName.match(yearPattern) || [];
+    const targetYears = targetTitle.match(yearPattern) || [];
+    
+    for (const year of sourceYears) {
+      // If the target has a year mentioned, it MUST match the source year.
+      // If target mentions NO year, we might let it pass (relying on Gemini's chipset/model logic), 
+      // but if it mentions a DIFFERENT year, it's an automatic rejection.
+      if (targetYears.length > 0 && !targetYears.includes(year)) {
+        return false;
       }
     }
 

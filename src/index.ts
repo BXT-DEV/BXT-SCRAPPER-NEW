@@ -40,7 +40,16 @@ function setupGracefulShutdown(browserService: BrowserService): void {
     if (isShuttingDown) return;
     isShuttingDown = true;
     logger.warn(`Received ${signal}. Shutting down gracefully...`);
-    await browserService.shutdown();
+    try {
+      const { convertCsvToExcel } = await import("./utils/excel-writer.js");
+      const { getOutputFilePath } = await import("./utils/csv-writer.js");
+      const { config } = await import("./config/index.js");
+      const outputPath = getOutputFilePath(config.outputDir);
+      await convertCsvToExcel(outputPath);
+    } catch (e) {
+      logger.error(`Failed to generate Excel on shutdown: ${(e as Error).message}`);
+    }
+
     process.exit(0);
   };
 
@@ -300,6 +309,13 @@ async function main(): Promise<void> {
 
   await browserService.shutdown();
   logger.info(`Done! Results: ${outputPath}`);
+
+  try {
+    const { convertCsvToExcel } = await import("./utils/excel-writer.js");
+    await convertCsvToExcel(outputPath);
+  } catch (e) {
+    logger.error(`Failed to generate Excel on complete: ${(e as Error).message}`);
+  }
 }
 
 main().catch(err => {
