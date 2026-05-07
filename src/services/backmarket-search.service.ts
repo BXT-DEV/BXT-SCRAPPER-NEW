@@ -164,10 +164,17 @@ export class BackmarketSearchService {
     // 2. SIM rules (Strict: Physical only)
     const simSuccess = await this.clickVariantByText(page, ["Physical SIM", "Dual SIM", "Nano-SIM"]);
     if (!simSuccess) {
-       // Backmarket usually displays SIM type in the title or a badge if it's specific
-       const pageText = await page.evaluate(() => document.body.innerText);
-       if (pageText.includes("eSIM") && !pageText.includes("Physical SIM")) {
-         throw new Error("REQUIRED_VARIANT_NOT_FOUND: Physical SIM (Listing seems to be eSIM only)");
+       const isEsimOnly = await page.evaluate(() => {
+         const title = document.querySelector('h1')?.innerText || '';
+         return title.toLowerCase().includes('esim');
+       });
+       if (isEsimOnly) {
+         throw new Error("REQUIRED_VARIANT_NOT_FOUND: Physical SIM (Listing title indicates eSIM only)");
+       } else {
+         const pageText = await page.evaluate(() => document.body.innerText);
+         if (pageText.includes("eSIM") && !pageText.includes("Physical SIM")) {
+           logger.warn("Listing contains 'eSIM' in the text, but no explicit physical SIM option was found to click. Proceeding anyway.");
+         }
        }
     }
 
@@ -185,7 +192,7 @@ export class BackmarketSearchService {
       return null;
     });
 
-    return { price, cleanUrl: page.url().split('?')[0] };
+    return { price, cleanUrl: page.url() };
   }
 
   private async clickVariantByText(page: Page, texts: string[]): Promise<boolean> {

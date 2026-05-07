@@ -61,11 +61,7 @@ export class ReebeloSearchService {
         await randomDelay(2000, 3000);
       }
 
-      await page.fill('#e2e-searchbar-search-input', ''); // Clear existing input
-      for (const char of productQuery) {
-        await page.type('#e2e-searchbar-search-input', char);
-        await randomDelay(50, 180); // Random typing delay per character
-      }
+      await page.fill('#e2e-searchbar-search-input', productQuery);
       await randomDelay(500, 1000);
       await page.click('#e2e-searchbar-search-button');
       
@@ -142,10 +138,17 @@ export class ReebeloSearchService {
     // 3. SIM selection (Strict: Physical only)
     const simSuccess = await this.clickVariantByText(page, ["Physical SIM", "Dual SIM", "Nano-SIM", "Single SIM"]);
     if (!simSuccess) {
-      // Check if "eSIM" is the only thing present
-      const hasEsim = await page.evaluate(() => document.body.innerText.includes("eSIM"));
-      if (hasEsim) {
-        throw new Error("REQUIRED_VARIANT_NOT_FOUND: Physical SIM (Listing seems to be eSIM only)");
+      const isEsimOnly = await page.evaluate(() => {
+        const title = document.querySelector('h1')?.innerText || '';
+        return title.toLowerCase().includes('esim');
+      });
+      if (isEsimOnly) {
+        throw new Error("REQUIRED_VARIANT_NOT_FOUND: Physical SIM (Listing title indicates eSIM only)");
+      } else {
+        const hasEsim = await page.evaluate(() => document.body.innerText.includes("eSIM"));
+        if (hasEsim) {
+          logger.warn("Listing contains 'eSIM' in the text, but no explicit physical SIM option was found to click. Proceeding anyway.");
+        }
       }
     }
 
@@ -163,7 +166,7 @@ export class ReebeloSearchService {
       return null;
     });
 
-    return { price, cleanUrl: page.url().split('?')[0] };
+    return { price, cleanUrl: page.url() };
   }
 
   private async clickVariantByText(page: Page, texts: string[]): Promise<boolean> {

@@ -220,12 +220,29 @@ async function main(): Promise<void> {
   logger.info("═══════════════════════════════════════════");
   logger.info(`  Category : ${config.mappingCategory}`);
   logger.info(`  Target   : ${config.scraperTarget}`);
+  logger.info(`  Mode     : ${config.scraperMode.toUpperCase()}`);
   logger.info("═══════════════════════════════════════════");
 
   const products = await readProductsCsv(config.inputCsvPath);
   const outputPath = getOutputFilePath(config.outputDir);
   fs.mkdirSync(config.outputDir, { recursive: true });
-  const completedSkus = await loadCompletedSkus(outputPath);
+
+  let completedSkus = new Set<string>();
+
+  if (config.scraperMode === "fresh") {
+    // Delete existing output files for a clean start
+    const xlsxPath = outputPath.replace(/\.csv$/, ".xlsx");
+    if (fs.existsSync(outputPath)) {
+      fs.unlinkSync(outputPath);
+      logger.info(`🗑️ Fresh mode: deleted old output ${outputPath}`);
+    }
+    if (fs.existsSync(xlsxPath)) {
+      fs.unlinkSync(xlsxPath);
+      logger.info(`🗑️ Fresh mode: deleted old output ${xlsxPath}`);
+    }
+  } else {
+    completedSkus = await loadCompletedSkus(outputPath);
+  }
 
   const pendingProducts = products.filter(p => !completedSkus.has(p.sku)).slice(0, 50);
 
@@ -295,11 +312,15 @@ async function main(): Promise<void> {
         await randomDelay(60000, 90000);
         i--; continue;
       }
+      // Write error result to CSV so output file always has data
+      const errorResult = buildErrorResult(product, errorMessage);
+      await appendResultRow(outputPath, errorResult);
+      logger.error(`${progress} ⚠️ Error: ${errorMessage}`);
+
       if (errorMessage === "ALL_GEMINI_KEYS_EXHAUSTED") {
         logger.error("All Gemini API keys exhausted! Stopping processing.");
         break;
       }
-      logger.error(`${progress} ⚠️ Error: ${errorMessage}`);
     }
 
     if (i < pendingProducts.length - 1 && !isShuttingDown) {

@@ -2,22 +2,22 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import { createReadStream, statSync } from 'node:fs';
 import path from 'node:path';
-import { exec } from 'node:child_process';
+import { exec, spawn } from 'node:child_process';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = 3003;
+const PORT = 3000;
 const PROJECT_ROOT = process.cwd();
 const ENV_PATH = path.join(PROJECT_ROOT, '.env');
 const ENV_EXAMPLE_PATH = path.join(PROJECT_ROOT, '.env.example');
 const INPUT_DIR = path.join(PROJECT_ROOT, 'input');
 const OUTPUT_DIR = path.join(PROJECT_ROOT, 'output');
 const isPackaged = (process as any).pkg !== undefined;
-const HTML_PATH = isPackaged 
-  ? path.resolve(__dirname, '../src/ui/index.html') 
+const HTML_PATH = isPackaged
+  ? path.resolve(__dirname, '../src/ui/index.html')
   : path.join(__dirname, 'ui', 'index.html');
 
 // ── Helpers ──────────────────────────────────────────────
@@ -26,8 +26,8 @@ function openBrowser(url: string) {
   const platform = os.platform();
   const command =
     platform === 'win32' ? `start "" "${url}"` :
-    platform === 'darwin' ? `open "${url}"` :
-    `xdg-open "${url}"`;
+      platform === 'darwin' ? `open "${url}"` :
+        `xdg-open "${url}"`;
   exec(command);
 }
 
@@ -214,7 +214,15 @@ const server = http.createServer(async (req, res) => {
     if (method === 'POST' && url === '/api/env') return await handlePostEnv(req, res);
     if (method === 'POST' && url === '/api/upload-csv') return await handleUploadCsv(req, res);
     if (method === 'GET' && url === '/api/output-files') return await handleGetOutputFiles(res);
-    
+
+    if (method === 'GET' && url === '/api/scraper-status') {
+      return jsonResponse(res, {
+        running: !!currentScraperProcess,
+        pid: currentScraperProcess ? currentScraperProcess.pid : null
+      });
+    }
+
+
     if (method === 'POST' && url === '/api/run-scraper') {
       if (currentScraperProcess) {
         return jsonResponse(res, { success: false, error: 'Scraper is already running' }, 400);
@@ -223,7 +231,7 @@ const server = http.createServer(async (req, res) => {
       const currentEnv = await parseEnvFile(ENV_PATH);
       const scraperTarget = (currentEnv['SCRAPER_TARGET'] || 'amazon').toLowerCase();
       const inputPath = currentEnv['INPUT_CSV_PATH'] || 'input/upload.csv';
-      
+
       // Determine which command to run based on SCRAPER_TARGET and CSV format.
       // `npm run bxt` (fill-amazon-urls.ts) is an Amazon-only URL filler for BXT-format CSVs.
       // `npm run scrape` (index.ts) is the main orchestrator that supports ALL targets.
@@ -234,27 +242,48 @@ const server = http.createServer(async (req, res) => {
           const fullInputPath = path.join(PROJECT_ROOT, inputPath);
           const fileContent = await fs.readFile(fullInputPath, 'utf-8');
           const firstLine = fileContent.split('\n')[0];
-          
+
           // Only use the BXT-specific Amazon filler when the CSV has the full BXT format
           if (firstLine && (firstLine.includes('Competitor #3 URL') || firstLine.includes('Harga AMAZON'))) {
-             commandToRun = 'npm run bxt';
+            commandToRun = 'npm run bxt';
           }
         } catch (e) {
-           console.warn("Could not read input CSV for format detection", e);
+          console.warn("Could not read input CSV for format detection", e);
         }
       }
-      
+
       console.log(`Executing: ${commandToRun} (target: ${scraperTarget})`);
-      currentScraperProcess = exec(commandToRun, (error, stdout, stderr) => {
-        currentScraperProcess = null;
-        if (error) {
-          console.error(`Scraper error: ${error.message}`);
-          return;
-        }
-        if (stderr) console.error(`Scraper stderr: ${stderr}`);
-        console.log(`Scraper stdout: ${stdout}`);
+
+      const parts = commandToRun.split(' ');
+      const cmd = parts[0];
+      const args = parts.slice(1);
+
+      currentScraperProcess = spawn(cmd, args, {
+        shell: true,
+        detached: os.platform() !== 'win32', // detached for process group kill on unix
+        stdio: 'pipe'
       });
-      return jsonResponse(res, { success: true, pid: currentScraperProcess.pid, command: commandToRun, target: scraperTarget });
+
+      // Stream output to console to avoid buffer limits
+      currentScraperProcess.stdout?.on('data', (data: any) => process.stdout.write(data));
+      currentScraperProcess.stderr?.on('data', (data: any) => process.stderr.write(data));
+
+      currentScraperProcess.on('close', (code: number) => {
+        console.log(`Scraper process exited with code ${code}`);
+        currentScraperProcess = null;
+      });
+
+      currentScraperProcess.on('error', (err: Error) => {
+        console.error(`Failed to start scraper: ${err.message}`);
+        currentScraperProcess = null;
+      });
+
+      return jsonResponse(res, {
+        success: true,
+        pid: currentScraperProcess.pid,
+        command: commandToRun,
+        target: scraperTarget
+      });
     }
 
     if (method === 'POST' && url === '/api/stop-scraper') {
@@ -264,7 +293,13 @@ const server = http.createServer(async (req, res) => {
         if (os.platform() === 'win32') {
           exec(`taskkill /pid ${currentScraperProcess.pid} /t /f`);
         } else {
-          currentScraperProcess.kill('SIGINT');
+          try {
+            // Kill the entire process group
+            process.kill(-currentScraperProcess.pid, 'SIGINT');
+          } catch (e) {
+            // Fallback to normal kill if process group kill fails
+            currentScraperProcess.kill('SIGINT');
+          }
         }
         currentScraperProcess = null;
         return jsonResponse(res, { success: true, message: 'Scraper stopped' });

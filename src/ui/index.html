@@ -279,6 +279,7 @@
             const fieldMeta = {
                 "MAPPING_CATEGORY": { label: "Mapping Category", type: "select", options: ["MAPPING REFURBISHED", "MAPPING BRAND NEW", "MAPPING BRAND NEW Laptop", "MAPPING BRAND NEW Lens dan Camera"], hint: "Select the product mapping category rules to apply" },
                 "SCRAPER_TARGET": { label: "Scraper Target", type: "select", options: ["amazon", "jbhifi", "kogan", "phonebot", "reebelo", "backmarket", "mobileciti", "buymobile", "spectronic", "bestmobilephone", "scorptec", "centrecom", "digidirect", "georges"], hint: "Choose which website to scrape" },
+                "SCRAPER_MODE": { label: "Scraper Mode", type: "select", options: ["fresh", "resume"], hint: "Fresh = start clean (deletes old output). Resume = continue from last run" },
                 "GEMINI_API_KEY": { label: "Gemini API Key", type: "text", hint: "Get this from Google AI Studio" },
                 "GEMINI_MODEL": { label: "Gemini Model", type: "text", hint: "E.g., gemini-2.5-flash or gemini-2.0-flash" },
                 "PROXY_URL": { label: "Proxy URL", type: "text", hint: "Optional. E.g., http://user:pass@host:port" },
@@ -376,6 +377,45 @@
         // Load output files
         loadOutputFiles();
 
+        // Check status periodically
+        async function checkScraperStatus() {
+            try {
+                const res = await fetch("/api/scraper-status");
+                const data = await res.json();
+                const runBtn = document.getElementById("runBtn");
+                const stopBtn = document.getElementById("stopBtn");
+                const status = document.getElementById("statusMessage");
+
+                if (data.running) {
+                    stopBtn.style.display = "block";
+                    if (!runBtn.classList.contains("loading")) {
+                        runBtn.querySelector("span").textContent = "Scraper Running...";
+                        runBtn.style.opacity = "0.7";
+                        runBtn.style.pointerEvents = "none";
+                    }
+                    if (status.textContent === "" || status.textContent === "Scraper stopped successfully.") {
+                         status.textContent = `Scraper is running (PID: ${data.pid})`;
+                         status.className = "status-running";
+                    }
+                } else {
+                    stopBtn.style.display = "none";
+                    runBtn.querySelector("span").textContent = "🚀 Run Scraper Now";
+                    runBtn.style.opacity = "1";
+                    runBtn.style.pointerEvents = "auto";
+                    if (status.className === "status-running") {
+                        status.textContent = "Scraper finished.";
+                        status.className = "status-success";
+                        loadOutputFiles(); // Refresh list
+                    }
+                }
+            } catch (e) {
+                console.error("Status check failed", e);
+            }
+        }
+
+        setInterval(checkScraperStatus, 2000);
+        checkScraperStatus();
+
         // Run Scraper Button
         document.getElementById("runBtn").addEventListener("click", async () => {
             const btn = document.getElementById("runBtn");
@@ -410,22 +450,22 @@
         // Stop Scraper Button
         stopBtn.addEventListener("click", async () => {
             const status = document.getElementById("statusMessage");
+            if (!confirm("Are you sure you want to stop the scraper? This will trigger a graceful shutdown and Excel conversion.")) return;
+            
             stopBtn.disabled = true;
             stopBtn.textContent = "Stopping...";
             try {
                 const res = await fetch("/api/stop-scraper", { method: "POST" });
                 const data = await res.json();
                 if (data.success) {
-                    status.textContent = "Scraper stopped successfully.";
-                    status.className = "status-success";
-                    stopBtn.style.display = "none";
+                    status.textContent = "Stop signal sent. Waiting for graceful shutdown...";
+                    status.className = "status-running";
                 } else {
                     throw new Error(data.error);
                 }
             } catch (err) {
                 status.textContent = "Failed to stop scraper: " + err.message;
                 status.className = "status-error";
-            } finally {
                 stopBtn.disabled = false;
                 stopBtn.textContent = "🛑 Stop";
             }

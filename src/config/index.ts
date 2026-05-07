@@ -6,7 +6,7 @@
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import type { ScraperTarget, MappingCategory } from "../types/index.js";
+import type { ScraperTarget, ScraperMode, MappingCategory } from "../types/index.js";
 
 // ── Valid scraper targets per mapping category ─────────────
 // Enforced from "Note untuk scrapping mapping.md"
@@ -49,6 +49,7 @@ interface AppConfig {
   digidirectDomain: string;
   georgesDomain: string;
   scraperTarget: ScraperTarget;
+  scraperMode: ScraperMode;
   requestDelayMinMs: number;
   requestDelayMaxMs: number;
   maxSearchResults: number;
@@ -103,6 +104,7 @@ function loadConfig(): AppConfig {
 
   const mappingCategory = (process.env.MAPPING_CATEGORY as MappingCategory) || "MAPPING BRAND NEW";
   const scraperTarget = (process.env.SCRAPER_TARGET as ScraperTarget) || "amazon";
+  const scraperMode = (process.env.SCRAPER_MODE as ScraperMode) || "fresh";
 
   // Validate category ↔ target combination
   validateCategoryTargetPair(mappingCategory, scraperTarget);
@@ -127,6 +129,7 @@ function loadConfig(): AppConfig {
     digidirectDomain: process.env.DIGIDIRECT_DOMAIN || "www.digidirect.com.au",
     georgesDomain: process.env.GEORGES_DOMAIN || "www.georges.com.au",
     scraperTarget,
+    scraperMode,
     requestDelayMinMs: parseInt(process.env.REQUEST_DELAY_MIN_MS || "3000", 10),
     requestDelayMaxMs: parseInt(process.env.REQUEST_DELAY_MAX_MS || "8000", 10),
     maxSearchResults: parseInt(process.env.MAX_SEARCH_RESULTS || "5", 10),

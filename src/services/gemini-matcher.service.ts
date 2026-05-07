@@ -224,7 +224,7 @@ export class GeminiMatcherService {
       try {
         const genAI = this.getGenAI();
         const response = await genAI.models.generateContent({
-          model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+          model: process.env.GEMINI_MODEL || "gemini-2.5-flash-lite",
           contents,
           config: {
             temperature: 0.1,
@@ -300,7 +300,7 @@ export class GeminiMatcherService {
     const yearPattern = /\b(201\d|202\d)\b/g;
     const sourceYears: string[] = sourceName.match(yearPattern) ?? [];
     const targetYears: string[] = targetTitle.match(yearPattern) ?? [];
-    
+
     for (const year of sourceYears) {
       // If the target has a year mentioned, it MUST match the source year.
       // If target mentions NO year, we might let it pass (relying on Gemini's chipset/model logic), 
