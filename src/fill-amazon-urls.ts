@@ -104,12 +104,9 @@ async function main() {
       
       try {
         // Ensure postcode is set on first visit to Amazon
-        if (isFirstAmazonLoad) {
-          logger.info("Visiting Amazon to set delivery postcode...");
-          await page.goto(`https://${config.amazonDomain}`, { waitUntil: "domcontentloaded" });
-          await searchService.setDeliveryPostcode(page);
-          isFirstAmazonLoad = false;
-        }
+        // AmazonSearchService.searchProduct will handle the initial navigation to the organic search URL
+        // and setting the delivery postcode on the first call.
+
 
         const searchQuery = productName.replace(/\s*-\s*Brand New\s*$/i, "").replace(/[()"]/g, "").trim();
         const searchResults = await searchService.searchProduct(page, searchQuery);

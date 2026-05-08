@@ -54,6 +54,7 @@ async function saveDebugSnapshot(page: Page, label: string): Promise<void> {
 export class AmazonSearchService {
   private readonly amazonDomain: string;
   private readonly maxResults: number;
+  private isInitialized = false;
 
   constructor(amazonDomain: string, maxResults: number) {
     this.amazonDomain = amazonDomain;
@@ -72,27 +73,37 @@ export class AmazonSearchService {
       const currentUrl = page.url();
       const isAlreadyOnAmazon = currentUrl.includes(this.amazonDomain);
 
-      if (!isAlreadyOnAmazon) {
+      if (!this.isInitialized || !isAlreadyOnAmazon) {
         logger.info(`Visiting Amazon via initial search link...`);
         // Using a search link to establish session
-        const organicAdUrl = "https://www.amazon.com.au/s?k=iphone&crid=2ZI04AL3B4HWS&sprefix=iphone%2Caps%2C399&ref=nb_sb_noss_1";
+        const organicAdUrl = "https://www.amazon.com.au/s?k=iphone&crid=1DMGKR2XYUHGW&sprefix=%2Caps%2C286&ref=nb_sb_ss_recent_1_0_recent";
         
         await page.goto(organicAdUrl, {
-          waitUntil: "domcontentloaded",
+          waitUntil: "networkidle",
           timeout: 60000,
+        }).catch(err => {
+          logger.warn(`Initial navigation warning: ${err.message}`);
         });
 
         // Wait for the Amazon page to fully render
         await page.waitForLoadState("load").catch(() => {});
         await randomDelay(2000, 4000);
 
+        // Check for CAPTCHA immediately after initial load
+        if (await detectCaptcha(page)) {
+          logger.error(`Blocked by CAPTCHA on initial load: ${await page.title()}`);
+          await saveDebugSnapshot(page, "captcha_initial");
+          throw new Error("CAPTCHA_DETECTED");
+        }
+
         // Set delivery postcode to 3175 Dandenong
         await this.setDeliveryPostcode(page);
+        this.isInitialized = true;
       }
 
-      // Check for CAPTCHA
+      // Check for CAPTCHA again before searching
       if (await detectCaptcha(page)) {
-        logger.error(`Blocked by CAPTCHA: ${await page.title()}`);
+        logger.error(`Blocked by CAPTCHA before search: ${await page.title()}`);
         await saveDebugSnapshot(page, "captcha");
         throw new Error("CAPTCHA_DETECTED");
       }
