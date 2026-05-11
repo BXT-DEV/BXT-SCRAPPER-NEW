@@ -82,8 +82,8 @@ function loadGeminiApiKeys(): string[] {
   if (primary && primary !== "your_gemini_api_key_here") {
     keys.push(primary);
   }
-  // Numbered keys: GEMINI_API_KEY1 .. GEMINI_API_KEY10
-  for (let i = 1; i <= 10; i++) {
+  // Numbered keys: GEMINI_API_KEY1 .. GEMINI_API_KEY50
+  for (let i = 1; i <= 50; i++) {
     const key = process.env[`GEMINI_API_KEY${i}`];
     if (key && key.trim()) {
       keys.push(key.trim());
@@ -144,6 +144,16 @@ function loadConfig(): AppConfig {
     projectRoot: PROJECT_ROOT,
     isDryRun,
   };
+}
+
+export function reloadGeminiKeys(): string[] {
+  // Clear existing env vars to ensure we read the latest from file
+  const PROJECT_ROOT = (process as any).pkg !== undefined 
+    ? process.cwd() 
+    : path.resolve(fileURLToPath(import.meta.url), "../../..");
+  
+  dotenv.config({ path: path.join(PROJECT_ROOT, ".env"), override: true });
+  return loadGeminiApiKeys();
 }
 
 export const config = loadConfig();

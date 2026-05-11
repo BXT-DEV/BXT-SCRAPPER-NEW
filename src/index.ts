@@ -3,7 +3,7 @@
 // Coordinates: CSV → Search → Match → Scrape Price → Output
 // ============================================================
 
-import { config } from "./config/index.js";
+import { config, reloadGeminiKeys } from "./config/index.js";
 import { logger } from "./utils/logger.js";
 import { readProductsCsv } from "./utils/csv-reader.js";
 import {
@@ -12,6 +12,7 @@ import {
   appendResultRow,
 } from "./utils/csv-writer.js";
 import { randomDelay } from "./utils/delay.js";
+import { updateScraperStatus, clearScraperStatus } from "./utils/status-manager.js";
 import { BrowserService } from "./services/browser.service.js";
 import { AmazonSearchService } from "./services/amazon-search.service.js";
 import { JbHifiSearchService } from "./services/jbhifi-search.service.js";
@@ -31,6 +32,9 @@ import { GeminiMatcherService } from "./services/gemini-matcher.service.js";
 import type { BecexProduct, ScrapedResult, AmazonSearchResult } from "./types/index.js";
 import fs from "fs";
 import type { Page } from "playwright";
+import { promisify } from "util";
+
+const sleep = promisify(setTimeout);
 
 // ── Graceful Shutdown ──────────────────────────────────────
 let isShuttingDown = false;
@@ -146,6 +150,31 @@ function cleanAmazonUrl(rawUrl: string): string {
   }
 }
 
+async function waitForNewGeminiKeys(matcherService: GeminiMatcherService, currentKeys: string[]): Promise<void> {
+  logger.warn("═══════════════════════════════════════════");
+  logger.warn(" ⏸️  SCRAPER PAUSED: All Gemini Keys Exhausted ");
+  logger.warn(" Please update .env with new API keys.      ");
+  logger.warn(" Watching .env for changes...               ");
+  logger.warn("═══════════════════════════════════════════");
+
+  const oldKeysSet = new Set(currentKeys);
+
+  while (true) {
+    await sleep(10000); // Check every 10 seconds
+    const newKeys = reloadGeminiKeys();
+    
+    // Check if there are any keys not in the old set
+    const hasNewKeys = newKeys.some(k => !oldKeysSet.has(k));
+    
+    if (hasNewKeys) {
+      logger.info("✨ New Gemini API keys detected! Resuming...");
+      matcherService.updateKeys(newKeys);
+      updateScraperStatus("running");
+      return;
+    }
+  }
+}
+
 // ── Process Single Product ─────────────────────────────────
 
 async function processSingleProduct(
@@ -213,6 +242,7 @@ async function processSingleProduct(
 // ── Main Orchestrator ──────────────────────────────────────
 
 async function main(): Promise<void> {
+  updateScraperStatus("running");
   const startTime = Date.now();
 
   logger.info("═══════════════════════════════════════════");
@@ -318,8 +348,10 @@ async function main(): Promise<void> {
       logger.error(`${progress} ⚠️ Error: ${errorMessage}`);
 
       if (errorMessage === "ALL_GEMINI_KEYS_EXHAUSTED") {
-        logger.error("All Gemini API keys exhausted! Stopping processing.");
-        break;
+        updateScraperStatus("paused", "ALL_GEMINI_KEYS_EXHAUSTED");
+        await waitForNewGeminiKeys(matcherService, matcherService.getApiKeys());
+        i--; // Retry the same product
+        continue;
       }
     }
 
@@ -329,6 +361,7 @@ async function main(): Promise<void> {
   }
 
   await browserService.shutdown();
+  clearScraperStatus();
   logger.info(`Done! Results: ${outputPath}`);
 
   try {

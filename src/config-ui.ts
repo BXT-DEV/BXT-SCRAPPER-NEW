@@ -5,11 +5,12 @@ import path from 'node:path';
 import { exec, spawn } from 'node:child_process';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { getScraperStatus } from './utils/status-manager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = 3000;
+const PORT = 3333;
 const PROJECT_ROOT = process.cwd();
 const ENV_PATH = path.join(PROJECT_ROOT, '.env');
 const ENV_EXAMPLE_PATH = path.join(PROJECT_ROOT, '.env.example');
@@ -219,6 +220,14 @@ const server = http.createServer(async (req, res) => {
       return jsonResponse(res, {
         running: !!currentScraperProcess,
         pid: currentScraperProcess ? currentScraperProcess.pid : null
+      });
+    }
+
+    if (method === 'GET' && url === '/api/scraper-status-detail') {
+      const status = getScraperStatus();
+      return jsonResponse(res, {
+        ...status,
+        processRunning: !!currentScraperProcess
       });
     }
 

@@ -164,6 +164,17 @@ export class GeminiMatcherService {
     logger.info(`Gemini API key pool loaded: ${apiKeys.length} key(s) available.`);
   }
 
+  public updateKeys(newKeys: string[]) {
+    this.apiKeys.length = 0;
+    this.apiKeys.push(...newKeys);
+    this.currentKeyIndex = 0;
+    logger.info(`Gemini API key pool updated: ${newKeys.length} key(s) available.`);
+  }
+
+  public getApiKeys(): string[] {
+    return [...this.apiKeys];
+  }
+
   private getGenAI(): GoogleGenAI {
     return new GoogleGenAI({ apiKey: this.apiKeys[this.currentKeyIndex] });
   }
