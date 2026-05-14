@@ -3,8 +3,15 @@
 // Playwright browser lifecycle with stealth anti-detection
 // ============================================================
 
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
+import { chromium, type BrowserContext, type Page } from "playwright";
+import path from "path";
+import fs from "fs";
+import { exec } from "child_process";
+import { promisify } from "util";
 import { logger } from "../utils/logger.js";
+import { config } from "../config/index.js";
+
+const execAsync = promisify(exec);
 
 // Randomize viewport to avoid fingerprinting
 const VIEWPORT_BASE = { width: 1920, height: 1080 };
@@ -24,7 +31,6 @@ function randomViewport() {
  * Singleton — call initialize() once, then newPage() for each task.
  */
 export class BrowserService {
-  private browser: Browser | null = null;
   private context: BrowserContext | null = null;
   private readonly proxyUrl: string | null;
 
@@ -33,19 +39,38 @@ export class BrowserService {
   }
 
   async initialize(): Promise<void> {
+    logger.info("Preparing environment...");
+    await this.forceCloseChrome();
+    
     logger.info("Launching stealth browser...");
+
+    const userDataDir = config.chromeUserDataDir;
+    if (!fs.existsSync(userDataDir)) {
+      try {
+        fs.mkdirSync(userDataDir, { recursive: true });
+      } catch (e) {
+        logger.warn(`Could not create user data directory: ${userDataDir}. Chrome might fail to launch if the path is invalid.`);
+      }
+    }
+    
+    logger.info(`Using Chrome profile at: ${userDataDir}`);
 
     const launchOptions: Record<string, unknown> = {
       headless: false,
-      slowMo: 100,
+      channel: "chrome", // Uses real Google Chrome instead of Chromium
+      viewport: randomViewport(),
+      locale: "en-AU",
+      timezoneId: "Australia/Sydney",
+      userAgent: this.getRandomUserAgent(),
+      extraHTTPHeaders: {
+        "Accept-Language": "en-AU,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Upgrade-Insecure-Requests": "1",
+      },
       args: [
         "--disable-blink-features=AutomationControlled",
-        "--disable-features=IsolateOrigins,site-per-process",
         "--no-sandbox",
-        "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--disable-gpu",
       ],
     };
 
@@ -57,34 +82,15 @@ export class BrowserService {
     }
 
     try {
-      this.browser = await chromium.launch(launchOptions);
+      this.context = await chromium.launchPersistentContext(userDataDir, launchOptions);
     } catch (error) {
       const msg = (error as Error).message;
-      if (msg.includes("Executable doesn't exist") || msg.includes("look like playwright was installed")) {
-        logger.error("══════════════════════════════════════════════════════════════");
-        logger.error("  BROWSER NOT FOUND!                                          ");
-        logger.error("  Playwright requires Chromium to be installed.               ");
-        logger.error("  Please run this command in your terminal:                  ");
-        logger.error("  npx playwright install chromium                             ");
-        logger.error("══════════════════════════════════════════════════════════════");
+      if (msg.includes("Executable doesn't exist")) {
+        logger.error("Google Chrome is required but not found on this system.");
         process.exit(1);
       }
       throw error;
     }
-
-    this.context = await this.browser.newContext({
-      viewport: randomViewport(),
-      locale: "en-AU",
-      timezoneId: "Australia/Sydney",
-      userAgent: this.getRandomUserAgent(),
-      extraHTTPHeaders: {
-        "Accept-Language": "en-AU,en;q=0.9",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Connection": "keep-alive",
-        "Upgrade-Insecure-Requests": "1",
-      },
-    });
 
     // Stealth: override navigator.webdriver
     await this.context.addInitScript(() => {
@@ -117,6 +123,28 @@ export class BrowserService {
       Object.defineProperty(navigator, "languages", {
         get: () => ["en-AU", "en"],
       });
+
+      // WebGL Fingerprint stealth
+      const getParameter = WebGLRenderingContext.prototype.getParameter;
+      WebGLRenderingContext.prototype.getParameter = function(parameter) {
+        // UNMASKED_VENDOR_WEBGL
+        if (parameter === 37445) return "Apple Inc.";
+        // UNMASKED_RENDERER_WEBGL
+        if (parameter === 37446) return "Apple GPU";
+        return getParameter.apply(this, [parameter]);
+      };
+
+      // Hardware/Memory overrides
+      Object.defineProperty(navigator, "hardwareConcurrency", { get: () => 8 });
+      Object.defineProperty(navigator, "deviceMemory", { get: () => 8 });
+
+      // Override chrome object
+      (window as any).chrome = {
+        runtime: {},
+        loadTimes: function() {},
+        csi: function() {},
+        app: {}
+      };
     });
 
     logger.info("Browser launched successfully");
@@ -129,15 +157,28 @@ export class BrowserService {
     return this.context.newPage();
   }
 
+  private async forceCloseChrome(): Promise<void> {
+    const platform = process.platform;
+    try {
+      if (platform === "darwin") {
+        logger.info("Checking for running Chrome instances (Mac)...");
+        await execAsync("pkill -i 'Google Chrome'").catch(() => {});
+      } else if (platform === "win32") {
+        logger.info("Checking for running Chrome instances (Windows)...");
+        await execAsync("taskkill /F /IM chrome.exe /T").catch(() => {});
+      }
+      // Give it a second to release file locks
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    } catch (err) {
+      logger.warn(`Attempt to force close Chrome failed: ${(err as Error).message}`);
+    }
+  }
+
   async shutdown(): Promise<void> {
     try {
       if (this.context) {
         await this.context.close().catch(() => {});
         this.context = null;
-      }
-      if (this.browser) {
-        await this.browser.close().catch(() => {});
-        this.browser = null;
       }
       logger.info("Browser shut down");
     } catch {

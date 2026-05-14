@@ -7,6 +7,7 @@ import type { Page } from "playwright";
 import type { AmazonSearchResult, BecexProduct } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { randomDelay } from "../utils/delay.js";
+import { extractSpecs } from "../utils/product-utils.js";
 import { humanType, humanClick, moveMouseRandomly, getModifierKey } from "../utils/human-interaction.js";
 import fs from "fs";
 import path from "path";
@@ -144,35 +145,17 @@ export class BuymobileSearchService {
   }
 
   async selectVariantsAndGetPrice(page: Page, product: BecexProduct): Promise<{price: number | null, cleanUrl: string}> {
-    logger.info("Selecting BuyMobile color variants...");
+    logger.info(`Selecting BuyMobile variants for: ${product.productName}`);
     await randomDelay(2000, 3000);
 
-    // Try to extract color from productName
-    // e.g. "Samsung Galaxy S24 Ultra 5G (12GB/512GB) - Titanium Black"
-    const colorMatch = product.productName.match(/-\s*([a-zA-Z\s]+?)(?:\s*-\s*Brand New)?$/i);
-    if (colorMatch && colorMatch[1]) {
-      const colorTarget = colorMatch[1].trim();
-      logger.info(`Attempting to select color: ${colorTarget}`);
-      
-      try {
-        const labels = await page.$$('label, .swatch, .color-swatch, button');
-        for (const label of labels) {
-          const text = (await label.textContent()) || "";
-          const value = (await label.getAttribute('value')) || "";
-          const aria = (await label.getAttribute('aria-label')) || "";
-          
-          const combined = `${text} ${value} ${aria}`.toLowerCase();
-          
-          if (combined.includes(colorTarget.toLowerCase())) {
-            await label.click().catch(() => {});
-            await randomDelay(1000, 2000);
-            break;
-          }
-        }
-      } catch (e) {
-        logger.warn(`Could not select variant color: ${colorTarget}`);
-      }
-    }
+    const specs = extractSpecs(product.productName);
+
+    // 1. Storage/Color/Connectivity
+    if (specs.storage.length > 0) await this.clickVariantByText(page, specs.storage);
+    if (specs.colors.length > 0) await this.clickVariantByText(page, specs.colors);
+    if (specs.connectivity.length > 0) await this.clickVariantByText(page, specs.connectivity);
+
+    await randomDelay(1000, 2000);
 
     const price = await page.evaluate(() => {
       const priceSelectors = ['.price-item--sale', '.price-item--regular', '.product__price', '.price'];
@@ -186,6 +169,30 @@ export class BuymobileSearchService {
       return null;
     });
 
-    return { price, cleanUrl: page.url() }; // Keep the ?variant= in URL for BuyMobile
+    return { price, cleanUrl: page.url() }; 
+  }
+
+  private async clickVariantByText(page: Page, texts: string[]): Promise<boolean> {
+    try {
+      const buttons = await page.$$('label, .swatch, .color-swatch, button, span, [role="button"]');
+      for (const btn of buttons) {
+        const text = (await btn.textContent()) || "";
+        const value = (await btn.getAttribute('value')) || "";
+        const aria = (await btn.getAttribute('aria-label')) || "";
+        
+        const combined = `${text} ${value} ${aria}`.toLowerCase();
+        
+        if (texts.some(t => combined.includes(t.toLowerCase()))) {
+          if (await btn.isVisible()) {
+            await btn.click({ force: true }).catch(() => {});
+            await randomDelay(1000, 2000);
+            return true;
+          }
+        }
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
   }
 }

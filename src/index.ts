@@ -29,6 +29,7 @@ import { CentrecomSearchService } from "./services/centrecom-search.service.js";
 import { DigidirectSearchService } from "./services/digidirect-search.service.js";
 import { GeorgesSearchService } from "./services/georges-search.service.js";
 import { GeminiMatcherService } from "./services/gemini-matcher.service.js";
+import { getBroadSearchQuery } from "./utils/product-utils.js";
 import type { BecexProduct, ScrapedResult, AmazonSearchResult } from "./types/index.js";
 import fs from "fs";
 import type { Page } from "playwright";
@@ -183,17 +184,17 @@ async function processSingleProduct(
   matcherService: GeminiMatcherService,
   page: Page
 ): Promise<ScrapedResult> {
-  // Pre-filter: Do NOT map Pristine items to Amazon
-  if (config.scraperTarget === "amazon" && product.sku.endsWith("-VR-ASN-AU")) {
-    logger.info("Skipping Pristine item for Amazon mapping (per rules).");
+  // Pre-filter: Do NOT map Pristine or Very Good items to Amazon
+  if (config.scraperTarget === "amazon" && (product.sku.endsWith("-VR-ASN-AU") || product.sku.endsWith("-VGC-AU"))) {
+    logger.info(`Skipping ${product.sku.endsWith("-VGC-AU") ? "Very Good" : "Pristine"} item for Amazon mapping (per rules).`);
     return buildNoMatchResult(product);
   }
 
   // Step 1: Human-like Search
-  const searchQuery = product.productName
-    .replace(/\s*-\s*Brand New\s*$/i, "")
-    .replace(/[()"]/g, "")
-    .trim();
+  const searchQuery = getBroadSearchQuery(product.productName);
+
+  logger.info(`  Original : "${product.productName}"`);
+  logger.info(`  Broad    : "${searchQuery}"`);
 
   const searchResults = await searchService.searchProduct(page, searchQuery);
 

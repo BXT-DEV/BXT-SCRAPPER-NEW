@@ -7,6 +7,7 @@ import type { Page } from "playwright";
 import type { AmazonSearchResult, BecexProduct } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { randomDelay } from "../utils/delay.js";
+import { extractSpecs } from "../utils/product-utils.js";
 
 export class DigidirectSearchService {
   private readonly domain: string;
@@ -54,44 +55,20 @@ export class DigidirectSearchService {
   }
 
   async selectVariantsAndGetPrice(page: Page, product: BecexProduct): Promise<{price: number | null, cleanUrl: string}> {
-    logger.info("Selecting Digidirect Mount/Bundle variants...");
+    logger.info(`Selecting Digidirect variants for: ${product.productName}`);
     await randomDelay(2000, 3000);
 
-    // Try to extract Mount or Bundle from productName
-    // e.g. "Sigma 12mm f/1.4 DC Contemporary Lens (Canon RF) - Brand New" -> "Canon RF"
+    const specs = extractSpecs(product.productName);
+
+    // 1. Storage/Color/Connectivity
+    if (specs.storage.length > 0) await this.clickVariantByText(page, specs.storage);
+    if (specs.colors.length > 0) await this.clickVariantByText(page, specs.colors);
+    if (specs.connectivity.length > 0) await this.clickVariantByText(page, specs.connectivity);
+
+    // 2. Mount selection (Original logic)
     const mountMatch = product.productName.match(/\(([^)]+)\)/);
     if (mountMatch && mountMatch[1]) {
-      const mountTarget = mountMatch[1].trim();
-      logger.info(`Attempting to select Mount/Bundle: ${mountTarget}`);
-      
-      try {
-        const labels = await page.$$('div.swatch-option, select.super-attribute-select, option');
-        for (const label of labels) {
-          const text = (await label.textContent()) || "";
-          const aria = (await label.getAttribute('aria-label')) || "";
-          const optionLabel = (await label.getAttribute('data-option-label')) || "";
-          
-          const combined = `${text} ${aria} ${optionLabel}`.toLowerCase();
-          
-          if (combined.includes(mountTarget.toLowerCase())) {
-            // For selects, we might need to selectOption instead of click
-            const tagName = await label.evaluate(e => e.tagName.toLowerCase());
-            if (tagName === 'option') {
-              const parentSelect = await label.evaluateHandle(e => e.parentElement);
-              const value = await label.getAttribute('value');
-              if (value) {
-                await parentSelect.asElement()?.selectOption(value).catch(() => {});
-              }
-            } else {
-              await label.click().catch(() => {});
-            }
-            await randomDelay(1000, 2000);
-            break;
-          }
-        }
-      } catch (e) {
-        logger.warn(`Could not select variant: ${mountTarget}`);
-      }
+      await this.clickVariantByText(page, [mountMatch[1].trim()]);
     }
 
     const price = await page.evaluate(() => {
@@ -107,5 +84,36 @@ export class DigidirectSearchService {
     });
 
     return { price, cleanUrl: page.url() }; 
+  }
+
+  private async clickVariantByText(page: Page, texts: string[]): Promise<boolean> {
+    try {
+      const labels = await page.$$('div.swatch-option, select.super-attribute-select, option, label, button, span');
+      for (const label of labels) {
+        const text = (await label.textContent()) || "";
+        const aria = (await label.getAttribute('aria-label')) || "";
+        const optionLabel = (await label.getAttribute('data-option-label')) || "";
+        
+        const combined = `${text} ${aria} ${optionLabel}`.toLowerCase();
+        
+        if (texts.some(t => combined.includes(t.toLowerCase()))) {
+          const tagName = await label.evaluate(e => e.tagName.toLowerCase());
+          if (tagName === 'option') {
+            const parentSelect = await label.evaluateHandle(e => e.parentElement);
+            const value = await label.getAttribute('value');
+            if (value) {
+              await parentSelect.asElement()?.selectOption(value).catch(() => {});
+            }
+          } else {
+            await label.click({ force: true }).catch(() => {});
+          }
+          await randomDelay(1000, 2000);
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
   }
 }

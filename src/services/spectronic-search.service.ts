@@ -7,6 +7,7 @@ import type { Page } from "playwright";
 import type { AmazonSearchResult } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { randomDelay } from "../utils/delay.js";
+import { extractSpecs } from "../utils/product-utils.js";
 import { humanType, humanClick, moveMouseRandomly, getModifierKey } from "../utils/human-interaction.js";
 import fs from "fs";
 import path from "path";
@@ -140,6 +141,55 @@ export class SpectronicSearchService {
     } catch (error) {
       logger.error(`Spectronic Search failed: ${(error as Error).message}`);
       return [];
+    }
+  }
+
+  async selectVariantsAndGetPrice(page: Page, product: any): Promise<{price: number | null, cleanUrl: string}> {
+    logger.info(`Selecting Spectronic variants for: ${product.productName}`);
+    await randomDelay(2000, 3000);
+
+    const specs = extractSpecs(product.productName);
+
+    // 1. Storage selection
+    if (specs.storage.length > 0) {
+      await this.clickVariantByText(page, specs.storage);
+    }
+
+    // 2. Color selection
+    if (specs.colors.length > 0) {
+      await this.clickVariantByText(page, specs.colors);
+    }
+
+    await randomDelay(1000, 2000);
+
+    const price = await page.evaluate(() => {
+      const priceEl = document.querySelector('.price, .product-price, .ticket-price, .current-price');
+      if (priceEl) {
+        const match = priceEl.textContent?.replace(/[^0-9.]/g, "");
+        if (match) return parseFloat(match);
+      }
+      return null;
+    });
+
+    return { price, cleanUrl: page.url() };
+  }
+
+  private async clickVariantByText(page: Page, texts: string[]): Promise<boolean> {
+    try {
+      const buttons = await page.$$('button, label, [role="button"], span');
+      for (const btn of buttons) {
+        const text = await btn.textContent();
+        if (text && texts.some(t => text.trim().toLowerCase() === t.toLowerCase())) {
+          if (await btn.isVisible()) {
+            await btn.click({ force: true }).catch(() => {});
+            await randomDelay(1000, 2000);
+            return true;
+          }
+        }
+      }
+      return false;
+    } catch (e) {
+      return false;
     }
   }
 }

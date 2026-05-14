@@ -86,9 +86,9 @@ async function main() {
     const productName = row["PRODUCT NAME"] || "";
     let comp3Url = (row["Competitor #3 URL"] || "").trim();
 
-    // Skip and clear if pristine (per rules: DO NOT map Pristine items to Amazon)
+    // Skip and clear if pristine or very good (per rules: DO NOT map these items to Amazon)
     const sku = row["GTIN / EAN / UPC"] || "";
-    if (sku.endsWith("-VR-ASN-AU")) {
+    if (sku.endsWith("-VR-ASN-AU") || sku.endsWith("-VGC-AU")) {
       if (row["Competitor #3 URL"] || row["Harga AMAZON"]) {
         row["Competitor #3 URL"] = "";
         row["Harga AMAZON"] = "#N/A";

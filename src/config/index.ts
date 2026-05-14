@@ -56,6 +56,7 @@ interface AppConfig {
   inputCsvPath: string;
   outputDir: string;
   projectRoot: string;
+  chromeUserDataDir: string;
   isDryRun: boolean;
 }
 
@@ -142,6 +143,7 @@ function loadConfig(): AppConfig {
       process.env.OUTPUT_DIR || "output"
     ),
     projectRoot: PROJECT_ROOT,
+    chromeUserDataDir: process.env.CHROME_USER_DATA_DIR || path.join(PROJECT_ROOT, "chrome-data"),
     isDryRun,
   };
 }

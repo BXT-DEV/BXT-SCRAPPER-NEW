@@ -136,3 +136,8 @@ dist
 .pnp.*
 /debug
 .env
+/chrome-data/Default/Cache
+/chrome-data/Default/Code Cache
+/chrome-data/GraphiteDawnCache
+/chrome-data/Default/Site Characteristics Database
+/chrome-data/Default/IndexedDB

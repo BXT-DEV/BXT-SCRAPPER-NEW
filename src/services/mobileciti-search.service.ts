@@ -7,6 +7,7 @@ import type { Page } from "playwright";
 import type { AmazonSearchResult } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { randomDelay } from "../utils/delay.js";
+import { extractSpecs } from "../utils/product-utils.js";
 import { humanType, humanClick, moveMouseRandomly, getModifierKey } from "../utils/human-interaction.js";
 import fs from "fs";
 import path from "path";
@@ -140,6 +141,64 @@ export class MobilecitiSearchService {
     } catch (error) {
       logger.error(`Mobileciti Search failed: ${(error as Error).message}`);
       return [];
+    }
+  }
+
+  async selectVariantsAndGetPrice(page: Page, product: any): Promise<{price: number | null, cleanUrl: string}> {
+    logger.info(`Selecting Mobileciti variants for: ${product.productName}`);
+    await randomDelay(2000, 3000);
+
+    const specs = extractSpecs(product.productName);
+
+    // Mobileciti specific: Variants are often in the search results already,
+    // but if we land on a configurable product, we need to pick options.
+    
+    // 1. Storage selection
+    if (specs.storage.length > 0) {
+      await this.clickVariantByText(page, specs.storage);
+    }
+
+    // 2. Color selection
+    if (specs.colors.length > 0) {
+      await this.clickVariantByText(page, specs.colors);
+    }
+
+    await randomDelay(1000, 2000);
+
+    const price = await page.evaluate(() => {
+      const priceSelectors = ['.price', '[data-price-type="finalPrice"] .price'];
+      for (const sel of priceSelectors) {
+        const el = document.querySelector(sel);
+        if (el) {
+          const match = el.textContent?.replace(/[^0-9.]/g, "");
+          if (match) return parseFloat(match);
+        }
+      }
+      return null;
+    });
+
+    return { price, cleanUrl: page.url() };
+  }
+
+  private async clickVariantByText(page: Page, texts: string[]): Promise<boolean> {
+    try {
+      const buttons = await page.$$('.swatch-option, .option-label, .variant-button');
+      for (const btn of buttons) {
+        const text = await btn.textContent();
+        const label = await btn.getAttribute('aria-label') || await btn.getAttribute('data-option-label');
+        
+        if ((text && texts.some(t => text.trim().toLowerCase() === t.toLowerCase())) || 
+            (label && texts.some(t => label.trim().toLowerCase() === t.toLowerCase()))) {
+          if (await btn.isVisible()) {
+            await btn.click({ force: true }).catch(() => {});
+            await randomDelay(1000, 2000);
+            return true;
+          }
+        }
+      }
+      return false;
+    } catch (e) {
+      return false;
     }
   }
 }

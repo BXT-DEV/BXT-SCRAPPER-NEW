@@ -7,6 +7,7 @@ import type { Page } from "playwright";
 import type { AmazonSearchResult, BecexProduct } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { randomDelay } from "../utils/delay.js";
+import { extractSpecs } from "../utils/product-utils.js";
 
 export class ReebeloSearchService {
   private readonly domain: string;
@@ -106,36 +107,39 @@ export class ReebeloSearchService {
   }
 
   async selectVariantsAndGetPrice(page: Page, product: BecexProduct): Promise<{price: number | null, cleanUrl: string}> {
-    logger.info("Selecting Reebelo variants based on mapping rules...");
+    logger.info(`Selecting Reebelo variants for: ${product.productName}`);
     await randomDelay(2000, 3000);
 
+    const specs = extractSpecs(product.productName);
     const isPristine = product.sku.endsWith("-VR-ASN-AU");
     const isExcellent = product.sku.endsWith("-RD-VR-EXD-AU");
 
     // 1. Condition selection
-    let conditionSuccess = false;
     if (isPristine) {
-      conditionSuccess = await this.clickVariantByText(page, ["Premium", "Pristine"]);
+      await this.clickVariantByText(page, ["Premium", "Pristine"]);
     } else if (isExcellent) {
-      conditionSuccess = await this.clickVariantByText(page, ["Excellent"]);
-    } else {
-      // For other refurbished types if any
-      conditionSuccess = true; 
+      await this.clickVariantByText(page, ["Excellent"]);
     }
 
-    if (!conditionSuccess) {
-      throw new Error(`REQUIRED_VARIANT_NOT_FOUND: Condition (${isPristine ? "Premium" : "Excellent"})`);
+    // 2. Storage selection
+    if (specs.storage.length > 0) {
+      await this.clickVariantByText(page, specs.storage);
     }
 
-    // 2. Battery selection (Strict: Standard only)
-    const batterySuccess = await this.clickVariantByText(page, ["Standard Battery", "Standard"]);
-    if (!batterySuccess) {
-      // Some listings might not have battery choices (if they only have one type)
-      // but we should at least check if "Elevated" or "New" is NOT selected.
-      logger.warn("Could not explicitly click 'Standard Battery'. Proceeding with caution.");
+    // 3. Color selection
+    if (specs.colors.length > 0) {
+      await this.clickVariantByText(page, specs.colors);
     }
 
-    // 3. SIM selection (Strict: Physical only)
+    // 4. Connectivity selection
+    if (specs.connectivity.length > 0) {
+      await this.clickVariantByText(page, specs.connectivity);
+    }
+
+    // 5. Battery selection (Strict: Standard only)
+    await this.clickVariantByText(page, ["Standard Battery", "Standard"]);
+
+    // 6. SIM selection (Strict: Physical only)
     const simSuccess = await this.clickVariantByText(page, ["Physical SIM", "Dual SIM", "Nano-SIM", "Single SIM"]);
     if (!simSuccess) {
       const isEsimOnly = await page.evaluate(() => {
@@ -144,11 +148,6 @@ export class ReebeloSearchService {
       });
       if (isEsimOnly) {
         throw new Error("REQUIRED_VARIANT_NOT_FOUND: Physical SIM (Listing title indicates eSIM only)");
-      } else {
-        const hasEsim = await page.evaluate(() => document.body.innerText.includes("eSIM"));
-        if (hasEsim) {
-          logger.warn("Listing contains 'eSIM' in the text, but no explicit physical SIM option was found to click. Proceeding anyway.");
-        }
       }
     }
 

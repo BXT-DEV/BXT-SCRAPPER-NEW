@@ -17,6 +17,7 @@ function buildStoreRules(scraperTarget: ScraperTarget, mappingCategory: MappingC
     rules.push("REFURBISHED MAPPING — You are matching refurbished/renewed products.");
     rules.push("Source SKU ending in '-VR-ASN-AU' = Pristine condition.");
     rules.push("Source SKU ending in '-RD-VR-EXD-AU' = Excellent condition.");
+    rules.push("Source SKU ending in '-VGC-AU' = Very Good condition.");
 
     if (scraperTarget === "reebelo") {
       rules.push("STORE: Reebelo (reebelo.com.au)");
@@ -30,6 +31,7 @@ function buildStoreRules(scraperTarget: ScraperTarget, mappingCategory: MappingC
     } else if (scraperTarget === "amazon") {
       rules.push("STORE: Amazon (amazon.com.au) — REFURBISHED rules");
       rules.push("- DO NOT map Pristine items to Amazon AT ALL. If SKU ends in '-VR-ASN-AU', set isMatch=false.");
+      rules.push("- DO NOT map Very Good items to Amazon AT ALL. If SKU ends in '-VGC-AU', set isMatch=false.");
       rules.push("- Excellent (our) → ONLY match 'Excellent' or 'Renewed' condition. Renewed = Excellent.");
       rules.push("- REJECT listings that mention: bonus accessories (case, screen protector, earphones, brick, etc.)");
       rules.push("- REJECT listings with warranty > 6 months.");
@@ -284,11 +286,25 @@ export class GeminiMatcherService {
     const sourceLower = sourceName.toLowerCase();
     const targetLower = targetTitle.toLowerCase();
 
-    // 1. Storage Check (e.g., 128GB, 1TB)
-    const storagePattern = /\b(\d+(?:GB|TB))\b/gi;
+    // Helper to normalize "8GB" and "8 GB" to "8gb"
+    const normalize = (text: string) => text.replace(/\s*(gb|tb)\b/gi, "$1").toLowerCase();
+    
+    const sourceNorm = normalize(sourceLower);
+    const targetNorm = normalize(targetLower);
+
+    // 1. Storage/RAM Check (e.g., 128GB, 1TB, 8GB RAM)
+    const storagePattern = /\b(\d+\s*(?:GB|TB))\b/gi;
     const sourceStorages = sourceName.match(storagePattern) || [];
+    
     for (const storage of sourceStorages) {
-      if (!targetLower.includes(storage.toLowerCase())) return false;
+      const normStorage = normalize(storage);
+      if (!targetNorm.includes(normStorage)) {
+        // Special check: sometimes Backmarket says "1000 GB" instead of "1 TB"
+        if (normStorage === "1tb" && (targetNorm.includes("1000gb") || targetNorm.includes("1024gb"))) continue;
+        if (normStorage === "1000gb" && targetNorm.includes("1tb")) continue;
+        
+        return false;
+      }
     }
 
     // 2. Color Check
@@ -302,6 +318,8 @@ export class GeminiMatcherService {
           // Special case for Grey/Gray
           if (color === "grey" && targetLower.includes("gray")) continue;
           if (color === "gray" && targetLower.includes("grey")) continue;
+          // Special case for Space Grey
+          if (color === "grey" && targetLower.includes("space")) continue;
           return false;
         }
       }
@@ -313,9 +331,6 @@ export class GeminiMatcherService {
     const targetYears: string[] = targetTitle.match(yearPattern) ?? [];
 
     for (const year of sourceYears) {
-      // If the target has a year mentioned, it MUST match the source year.
-      // If target mentions NO year, we might let it pass (relying on Gemini's chipset/model logic), 
-      // but if it mentions a DIFFERENT year, it's an automatic rejection.
       if (targetYears.length > 0 && !targetYears.includes(year)) {
         return false;
       }
