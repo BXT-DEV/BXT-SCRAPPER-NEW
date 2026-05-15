@@ -53,7 +53,15 @@ export class BrowserService {
       }
     }
     
-    logger.info(`Using Chrome profile at: ${userDataDir}`);
+    logger.info(`Using Chrome user data dir: ${userDataDir}`);
+
+    const activeProfile = this.getActiveChromeProfile(userDataDir);
+    const profileArg = activeProfile ? `--profile-directory=${activeProfile}` : undefined;
+    if (activeProfile) {
+      logger.info(`Detected active Chrome profile: ${activeProfile}`);
+    } else {
+      logger.info(`Using Default Chrome profile`);
+    }
 
     const launchOptions: Record<string, unknown> = {
       headless: false,
@@ -71,6 +79,7 @@ export class BrowserService {
         "--disable-blink-features=AutomationControlled",
         "--no-sandbox",
         "--disable-dev-shm-usage",
+        ...(profileArg ? [profileArg] : []),
       ],
     };
 
@@ -172,6 +181,22 @@ export class BrowserService {
     } catch (err) {
       logger.warn(`Attempt to force close Chrome failed: ${(err as Error).message}`);
     }
+  }
+
+  private getActiveChromeProfile(userDataDir: string): string | null {
+    try {
+      const localStatePath = path.join(userDataDir, "Local State");
+      if (fs.existsSync(localStatePath)) {
+        const localStateStr = fs.readFileSync(localStatePath, "utf-8");
+        const localState = JSON.parse(localStateStr);
+        if (localState && localState.profile && localState.profile.last_used) {
+          return localState.profile.last_used as string;
+        }
+      }
+    } catch (err) {
+      logger.warn(`Could not read Chrome Local State to detect active profile: ${(err as Error).message}`);
+    }
+    return null;
   }
 
   async shutdown(): Promise<void> {
