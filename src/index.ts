@@ -10,6 +10,8 @@ import {
   getOutputFilePath,
   loadCompletedSkus,
   appendResultRow,
+  readExistingCsv,
+  getActiveRound,
 } from "./utils/csv-writer.js";
 import { randomDelay } from "./utils/delay.js";
 import { updateScraperStatus, clearScraperStatus } from "./utils/status-manager.js";
@@ -259,6 +261,7 @@ async function main(): Promise<void> {
   fs.mkdirSync(config.outputDir, { recursive: true });
 
   let completedSkus = new Set<string>();
+  let activeRound = 1;
 
   if (config.scraperMode === "fresh") {
     // Delete existing output files for a clean start
@@ -272,8 +275,13 @@ async function main(): Promise<void> {
       logger.info(`🗑️ Fresh mode: deleted old output ${xlsxPath}`);
     }
   } else {
-    completedSkus = await loadCompletedSkus(outputPath);
+    const existingRows = await readExistingCsv(outputPath);
+    activeRound = getActiveRound(existingRows);
+    completedSkus = await loadCompletedSkus(outputPath, activeRound);
   }
+
+  logger.info(`  Active Rd: Round ${activeRound}`);
+  logger.info("═══════════════════════════════════════════");
 
   const pendingProducts = products.filter(p => !completedSkus.has(p.sku)).slice(0, 50);
 
@@ -331,7 +339,7 @@ async function main(): Promise<void> {
 
     try {
       const result = await processSingleProduct(product, searchService, matcherService, page);
-      await appendResultRow(outputPath, result);
+      await appendResultRow(outputPath, result, activeRound);
 
       const statusEmoji = result.status === "matched" ? "✅" : "❌";
       const priceLog = result.amazonPrice ? ` — A$${result.amazonPrice}` : "";
@@ -345,7 +353,7 @@ async function main(): Promise<void> {
       }
       // Write error result to CSV so output file always has data
       const errorResult = buildErrorResult(product, errorMessage);
-      await appendResultRow(outputPath, errorResult);
+      await appendResultRow(outputPath, errorResult, activeRound);
       logger.error(`${progress} ⚠️ Error: ${errorMessage}`);
 
       if (errorMessage === "ALL_GEMINI_KEYS_EXHAUSTED") {

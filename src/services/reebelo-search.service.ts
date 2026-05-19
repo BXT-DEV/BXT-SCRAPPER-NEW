@@ -137,17 +137,34 @@ export class ReebeloSearchService {
     }
 
     // 5. Battery selection (Strict: Standard only)
-    await this.clickVariantByText(page, ["Standard Battery", "Standard"]);
+    const batterySuccess = await this.clickVariantByText(page, ["Standard Battery", "Standard"]);
+    if (!batterySuccess) {
+      const hasOtherBatteryOptions = await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll('button, div[role="button"], label, span'));
+        return buttons.some(btn => {
+          const txt = btn.textContent?.toLowerCase() || '';
+          return (txt.includes('elevated') || txt.includes('new battery')) && txt.length < 30;
+        });
+      });
+      if (hasOtherBatteryOptions) {
+        throw new Error("REQUIRED_VARIANT_NOT_FOUND: Standard Battery (Only Elevated or New Battery option is available)");
+      }
+    }
 
     // 6. SIM selection (Strict: Physical only)
     const simSuccess = await this.clickVariantByText(page, ["Physical SIM", "Dual SIM", "Nano-SIM", "Single SIM"]);
     if (!simSuccess) {
-      const isEsimOnly = await page.evaluate(() => {
+      const hasEsimOption = await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll('button, div[role="button"], label, span'));
         const title = document.querySelector('h1')?.innerText || '';
-        return title.toLowerCase().includes('esim');
+        if (title.toLowerCase().includes('esim')) return true;
+        return buttons.some(btn => {
+          const txt = btn.textContent?.toLowerCase() || '';
+          return txt.includes('esim') && txt.length < 30;
+        });
       });
-      if (isEsimOnly) {
-        throw new Error("REQUIRED_VARIANT_NOT_FOUND: Physical SIM (Listing title indicates eSIM only)");
+      if (hasEsimOption) {
+        throw new Error("REQUIRED_VARIANT_NOT_FOUND: Physical SIM (Only eSIM option is available)");
       }
     }
 
