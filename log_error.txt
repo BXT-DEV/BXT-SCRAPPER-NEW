@@ -1,0 +1,701 @@
+2021.5"%202019%204K&t=1778662235757
+[15:50:41] info: Found 0 results on Backmarket.
+[15:50:41] info: [19/50] ❌ no_match
+[15:50:43] info: [20/50] Processing: Apple iPad 10 (64GB, Blue) - Excellent
+[15:50:43] info:   Original : "Apple iPad 10 (64GB, Blue) - Excellent"
+[15:50:43] info:   Broad    : "Apple iPad 10"
+[15:50:43] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iPad%2010&t=1778662243043
+[15:50:49] info: Found 0 results on Backmarket.
+[15:50:49] info: [20/50] ❌ no_match
+[15:50:51] info: [21/50] Processing: Apple iPad 10 (64GB, Blue) Australian Stock - Pristine
+[15:50:51] info:   Original : "Apple iPad 10 (64GB, Blue) Australian Stock - Pristine"
+[15:50:51] info:   Broad    : "Apple iPad 10"
+[15:50:51] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iPad%2010&t=1778662251886
+[15:50:58] info: Found 0 results on Backmarket.
+[15:50:58] info: [21/50] ❌ no_match
+[15:50:59] info: [22/50] Processing: Apple iPad 10 (64GB, Pink) - Excellent
+[15:50:59] info:   Original : "Apple iPad 10 (64GB, Pink) - Excellent"
+[15:50:59] info:   Broad    : "Apple iPad 10"
+[15:50:59] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iPad%2010&t=1778662259652
+[15:51:06] info: Found 0 results on Backmarket.
+[15:51:06] info: [22/50] ❌ no_match
+[15:51:07] info: [23/50] Processing: Apple iPad 10 (64GB, Silver) - Excellent
+[15:51:07] info:   Original : "Apple iPad 10 (64GB, Silver) - Excellent"
+[15:51:07] info:   Broad    : "Apple iPad 10"
+[15:51:07] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iPad%2010&t=1778662267524
+[15:51:14] info: Found 0 results on Backmarket.
+[15:51:14] info: [23/50] ❌ no_match
+[15:51:16] info: [24/50] Processing: Apple iPad 10 (64GB, Silver) Australian Stock - Pristine
+[15:51:16] info:   Original : "Apple iPad 10 (64GB, Silver) Australian Stock - Pristine"
+[15:51:16] info:   Broad    : "Apple iPad 10"
+[15:51:16] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iPad%2010&t=1778662276389
+[15:51:22] info: Found 0 results on Backmarket.
+[15:51:22] info: [24/50] ❌ no_match
+[15:51:25] info: [25/50] Processing: Apple iPad 10 (64GB, Yellow) - Excellent
+[15:51:25] info:   Original : "Apple iPad 10 (64GB, Yellow) - Excellent"
+[15:51:25] info:   Broad    : "Apple iPad 10"
+[15:51:25] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iPad%2010&t=1778662285116
+[15:51:31] info: Found 0 results on Backmarket.
+[15:51:31] info: [25/50] ❌ no_match
+[15:51:33] info: [26/50] Processing: Apple iPad 10 (64GB, Yellow) Australian Stock - Pristine
+[15:51:33] info:   Original : "Apple iPad 10 (64GB, Yellow) Australian Stock - Pristine"
+[15:51:33] info:   Broad    : "Apple iPad 10"
+[15:51:33] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iPad%2010&t=1778662293234
+[15:51:40] info: Found 0 results on Backmarket.
+[15:51:40] info: [26/50] ❌ no_match
+[15:51:41] info: [27/50] Processing: Apple iPad 2 Cellular (16GB, Grey) - Pristine
+[15:51:41] info:   Original : "Apple iPad 2 Cellular (16GB, Grey) - Pristine"
+[15:51:41] info:   Broad    : "Apple iPad 2"
+[15:51:41] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iPad%202&t=1778662301578
+[15:51:48] info: Found 0 results on Backmarket.
+[15:51:48] info: [27/50] ❌ no_match
+[15:51:50] info: [28/50] Processing: Apple iPad 2 Cellular (16GB, Grey) Australian Stock - Excellent
+[15:51:50] info:   Original : "Apple iPad 2 Cellular (16GB, Grey) Australian Stock - Excellent"
+[15:51:50] info:   Broad    : "Apple iPad 2"
+[15:51:50] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iPad%202&t=1778662310565
+[15:51:56] info: Found 0 results on Backmarket.
+[15:51:56] info: [28/50] ❌ no_match
+[15:51:58] info: [29/50] Processing: Apple iPad 2 Cellular (32GB, Grey) Australian stock - Excellent
+[15:51:58] info:   Original : "Apple iPad 2 Cellular (32GB, Grey) Australian stock - Excellent"
+[15:51:58] info:   Broad    : "Apple iPad 2"
+[15:51:58] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iPad%202&t=1778662318148
+[15:52:04] info: Found 0 results on Backmarket.
+[15:52:04] info: [29/50] ❌ no_match
+[15:52:07] info: [30/50] Processing: Apple iPad 2 Cellular (32GB, Silver) Australian stock - Excellent
+[15:52:07] info:   Original : "Apple iPad 2 Cellular (32GB, Silver) Australian stock - Excellent"
+[15:52:07] info:   Broad    : "Apple iPad 2"
+[15:52:07] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iPad%202&t=1778662327105
+[15:52:13] info: Found 0 results on Backmarket.
+[15:52:13] info: [30/50] ❌ no_match
+[15:52:15] info: [31/50] Processing: Apple iPad 2 Cellular (32GB, Silver) Australian stock - Pristine
+[15:52:15] info:   Original : "Apple iPad 2 Cellular (32GB, Silver) Australian stock - Pristine"
+[15:52:15] info:   Broad    : "Apple iPad 2"
+[15:52:15] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iPad%202&t=1778662335406
+[15:52:21] info: Found 0 results on Backmarket.
+[15:52:21] info: [31/50] ❌ no_match
+[15:52:23] info: [32/50] Processing: Apple iPad 2 Cellular (64GB, Grey) - Excellent
+[15:52:23] info:   Original : "Apple iPad 2 Cellular (64GB, Grey) - Excellent"
+[15:52:23] info:   Broad    : "Apple iPad 2"
+[15:52:23] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iPad%202&t=1778662343415
+[15:52:30] info: Found 0 results on Backmarket.
+[15:52:30] info: [32/50] ❌ no_match
+[15:52:32] info: [33/50] Processing: Apple iPad 2 Cellular (64GB, Grey) - Pristine
+[15:52:32] info:   Original : "Apple iPad 2 Cellular (64GB, Grey) - Pristine"
+[15:52:32] info:   Broad    : "Apple iPad 2"
+[15:52:32] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iPad%202&t=1778662352217
+➜  BXT-SCRAPPER-NEW git:(main) ✗ npm run config
+
+
+> bxt-scrapper@1.0.0 config
+> tsx src/config-ui.ts
+
+
+======================================================
+🚀 Configuration UI is running at: http://localhost:3333
+======================================================
+
+Executing: npm run scrape (target: backmarket)
+(node:40003) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+> bxt-scrapper@1.0.0 scrape
+> tsx src/index.ts
+
+[15:52:40] info: ═══════════════════════════════════════════
+[15:52:40] info:   BXT-SCRAPPER — Price Finder              
+[15:52:40] info: ═══════════════════════════════════════════
+[15:52:40] info:   Category : MAPPING REFURBISHED
+[15:52:40] info:   Target   : backmarket
+[15:52:40] info:   Mode     : FRESH
+[15:52:40] info: ═══════════════════════════════════════════
+[15:52:40] info: Loaded 3317 products from CSV
+[15:52:40] info: 🗑️ Fresh mode: deleted old output /Volumes/BISMILLAH/PROJECTS/BXT-SCRAPPER-NEW/output/backmarket_2026-05-13.csv
+[15:52:40] info: Launching stealth browser...
+[15:52:40] warn: No proxy configured — Amazon may block after ~10-20 requests
+[15:52:41] info: Browser launched successfully
+[15:52:41] info: Gemini API key pool loaded: 22 key(s) available.
+[15:52:41] info: [1/50] Processing: Apple iMac 2017 (i5, 8GB RAM, 1TB) - Excellent
+[15:52:41] info:   Original : "Apple iMac 2017 (i5, 8GB RAM, 1TB) - Excellent"
+[15:52:41] info:   Broad    : "Apple iMac 2017"
+[15:52:41] info: Checking Backmarket login status...
+[15:52:45] info: Already logged into Backmarket.
+[15:52:45] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202017&t=1778662365106
+[15:52:52] info: Found 0 results on Backmarket.
+[15:52:52] info: [1/50] ❌ no_match
+[15:52:53] info: [2/50] Processing: Apple iMac 2017 21.5" (i5, 8GB RAM, 256GB) - Excellent
+[15:52:53] info:   Original : "Apple iMac 2017 21.5" (i5, 8GB RAM, 256GB) - Excellent"
+[15:52:53] info:   Broad    : "Apple iMac 2017 21.5""
+[15:52:53] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202017%2021.5"&t=1778662373862
+[15:52:59] info: Found 0 results on Backmarket.
+[15:52:59] info: [2/50] ❌ no_match
+[15:53:02] info: [3/50] Processing: Apple iMac 2017 27" (i5, 8GB RAM, 2TB) - Excellent
+[15:53:02] info:   Original : "Apple iMac 2017 27" (i5, 8GB RAM, 2TB) - Excellent"
+[15:53:02] info:   Broad    : "Apple iMac 2017 27""
+[15:53:02] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202017%2027"&t=1778662382461
+[15:53:09] info: Found 0 results on Backmarket.
+[15:53:09] info: [3/50] ❌ no_match
+[15:53:11] info: [4/50] Processing: Apple iMac 2017 27" (i7, 8GB RAM, 2TB) - Excellent
+[15:53:11] info:   Original : "Apple iMac 2017 27" (i7, 8GB RAM, 2TB) - Excellent"
+[15:53:11] info:   Broad    : "Apple iMac 2017 27""
+[15:53:11] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202017%2027"&t=1778662391323
+[15:53:17] info: Found 0 results on Backmarket.
+[15:53:17] info: [4/50] ❌ no_match
+[15:53:19] info: [5/50] Processing: Apple iMac 2019 21.5" (i5, 8GB RAM, 1TB) - Excellent
+[15:53:19] info:   Original : "Apple iMac 2019 21.5" (i5, 8GB RAM, 1TB) - Excellent"
+[15:53:19] info:   Broad    : "Apple iMac 2019 21.5""
+[15:53:19] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202019%2021.5"&t=1778662399794
+[15:53:25] info: Found 0 results on Backmarket.
+[15:53:25] info: [5/50] ❌ no_match
+[15:53:26] info: [6/50] Processing: Apple iMac 2019 21.5" (i7, 8GB RAM, 512GB) - Excellent
+[15:53:26] info:   Original : "Apple iMac 2019 21.5" (i7, 8GB RAM, 512GB) - Excellent"
+[15:53:26] info:   Broad    : "Apple iMac 2019 21.5""
+[15:53:26] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202019%2021.5"&t=1778662406959
+[15:53:33] info: Found 0 results on Backmarket.
+[15:53:33] info: [6/50] ❌ no_match
+[15:53:35] info: [7/50] Processing: Apple iMac 2020 5K (i5, 16GB RAM, 1TB) - Excellent
+[15:53:35] info:   Original : "Apple iMac 2020 5K (i5, 16GB RAM, 1TB) - Excellent"
+[15:53:35] info:   Broad    : "Apple iMac 2020 5K"
+[15:53:35] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202020%205K&t=1778662415541
+[15:53:41] info: Found 0 results on Backmarket.
+[15:53:41] info: [7/50] ❌ no_match
+[15:53:43] info: [8/50] Processing: Apple iMac 2021 (M1, 16GB RAM, 2TB, Blue) - Excellent
+[15:53:43] info:   Original : "Apple iMac 2021 (M1, 16GB RAM, 2TB, Blue) - Excellent"
+[15:53:43] info:   Broad    : "Apple iMac 2021"
+[15:53:43] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202021&t=1778662423570
+[15:53:50] info: Found 0 results on Backmarket.
+[15:53:50] info: [8/50] ❌ no_match
+[15:53:51] info: [9/50] Processing: Apple iMac 2021 (M1, 8GB RAM, 256GB, 7 Core GPU, Pink Red, 24inc) - Excellent
+[15:53:51] info:   Original : "Apple iMac 2021 (M1, 8GB RAM, 256GB, 7 Core GPU, Pink Red, 24inc) - Excellent"
+[15:53:51] info:   Broad    : "Apple iMac 2021"
+[15:53:51] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202021&t=1778662431542
+[15:53:57] info: Found 0 results on Backmarket.
+[15:53:57] info: [9/50] ❌ no_match
+[15:54:00] info: [10/50] Processing: Apple iMac 2021 (M1, 8GB RAM, 256GB, 7 Core GPU, Silver, 24inc) - Excellent
+[15:54:00] info:   Original : "Apple iMac 2021 (M1, 8GB RAM, 256GB, 7 Core GPU, Silver, 24inc) - Excellent"
+[15:54:00] info:   Broad    : "Apple iMac 2021"
+[15:54:00] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202021&t=1778662440249
+[15:54:06] info: Found 0 results on Backmarket.
+[15:54:06] info: [10/50] ❌ no_match
+[15:54:09] info: [11/50] Processing: Apple iMac 2021 (M1, 8GB RAM, 256GB, 8 Core GPU, Pink Red, 24inc) - Excellent
+[15:54:09] info:   Original : "Apple iMac 2021 (M1, 8GB RAM, 256GB, 8 Core GPU, Pink Red, 24inc) - Excellent"
+[15:54:09] info:   Broad    : "Apple iMac 2021"
+[15:54:09] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202021&t=1778662449479
+[15:54:15] info: Found 0 results on Backmarket.
+[15:54:15] info: [11/50] ❌ no_match
+[15:54:16] info: [12/50] Processing: Apple iMac 2021 (M1, 8GB RAM, 256GB, 8 Core GPU, Silver, 24inc) - Excellent
+[15:54:16] info:   Original : "Apple iMac 2021 (M1, 8GB RAM, 256GB, 8 Core GPU, Silver, 24inc) - Excellent"
+[15:54:16] info:   Broad    : "Apple iMac 2021"
+[15:54:16] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202021&t=1778662456501
+[15:54:22] info: Found 0 results on Backmarket.
+[15:54:22] info: [12/50] ❌ no_match
+[15:54:23] info: [13/50] Processing: Apple iMac 2021 (M1, 8GB RAM, 256GB, Blue) - Excellent
+[15:54:23] info:   Original : "Apple iMac 2021 (M1, 8GB RAM, 256GB, Blue) - Excellent"
+[15:54:23] info:   Broad    : "Apple iMac 2021"
+[15:54:23] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202021&t=1778662463999
+[15:54:30] info: Found 0 results on Backmarket.
+[15:54:30] info: [13/50] ❌ no_match
+[15:54:31] info: [14/50] Processing: Apple iMac 2021 (M1, 8GB RAM, 512GB, 8 Core GPU, Silver, 24inc) - Excellent
+[15:54:31] info:   Original : "Apple iMac 2021 (M1, 8GB RAM, 512GB, 8 Core GPU, Silver, 24inc) - Excellent"
+[15:54:31] info:   Broad    : "Apple iMac 2021"
+[15:54:31] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202021&t=1778662471650
+[15:54:38] info: Found 0 results on Backmarket.
+[15:54:38] info: [14/50] ❌ no_match
+[15:54:39] info: [15/50] Processing: Apple iMac 2021 (M1, 8GB RAM, 512GB, Blue) - Excellent
+[15:54:39] info:   Original : "Apple iMac 2021 (M1, 8GB RAM, 512GB, Blue) - Excellent"
+[15:54:39] info:   Broad    : "Apple iMac 2021"
+[15:54:39] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202021&t=1778662479888
+[15:54:45] info: Found 0 results on Backmarket.
+[15:54:45] info: [15/50] ❌ no_match
+[15:54:48] info: [16/50] Processing: Apple iMac 21.5" 2017 4K (i7 3.6Ghz, 8GB RAM, 1TB) - Excellent
+[15:54:48] info:   Original : "Apple iMac 21.5" 2017 4K (i7 3.6Ghz, 8GB RAM, 1TB) - Excellent"
+[15:54:48] info:   Broad    : "Apple iMac 21.5" 2017 4K"
+[15:54:48] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%2021.5"%202017%204K&t=1778662488516
+[15:54:55] info: Found 0 results on Backmarket.
+[15:54:55] info: [16/50] ❌ no_match
+[15:54:56] info: [17/50] Processing: Apple iMac 21.5" 2017 4K (i7 3.6Ghz, 8GB RAM, 256GB) - Excellent
+[15:54:56] info:   Original : "Apple iMac 21.5" 2017 4K (i7 3.6Ghz, 8GB RAM, 256GB) - Excellent"
+[15:54:56] info:   Broad    : "Apple iMac 21.5" 2017 4K"
+[15:54:56] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%2021.5"%202017%204K&t=1778662496576
+[15:55:02] info: Found 0 results on Backmarket.
+[15:55:02] info: [17/50] ❌ no_match
+[15:55:05] info: [18/50] Processing: Apple iMac 21.5" 2019 4K (i3 3.6Ghz, 8GB RAM, 1TB) - Excellent
+[15:55:05] info:   Original : "Apple iMac 21.5" 2019 4K (i3 3.6Ghz, 8GB RAM, 1TB) - Excellent"
+[15:55:05] info:   Broad    : "Apple iMac 21.5" 2019 4K"
+[15:55:05] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%2021.5"%202019%204K&t=1778662505927
+[15:55:12] info: Found 0 results on Backmarket.
+[15:55:12] info: [18/50] ❌ no_match
+[15:55:14] info: [19/50] Processing: Apple iMac 21.5" 2019 4K (i3 3.6Ghz, 8GB RAM, 256GB) - Excellent
+[15:55:14] info:   Original : "Apple iMac 21.5" 2019 4K (i3 3.6Ghz, 8GB RAM, 256GB) - Excellent"
+[15:55:14] info:   Broad    : "Apple iMac 21.5" 2019 4K"
+[15:55:14] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%2021.5"%202019%204K&t=1778662514542
+[15:55:21] info: Found 0 results on Backmarket.
+[15:55:21] info: [19/50] ❌ no_match
+[15:55:22] info: [20/50] Processing: Apple iPad 10 (64GB, Blue) - Excellent
+[15:55:22] info:   Original : "Apple iPad 10 (64GB, Blue) - Excellent"
+[15:55:22] info:   Broad    : "Apple iPad 10"
+[15:55:22] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iPad%2010&t=1778662522725
+➜  BXT-SCRAPPER-NEW git:(main) ✗ npm run config
+
+
+> bxt-scrapper@1.0.0 config
+> tsx src/config-ui.ts
+
+
+======================================================
+🚀 Configuration UI is running at: http://localhost:3333
+======================================================
+
+Executing: npm run scrape (target: backmarket)
+(node:41334) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+> bxt-scrapper@1.0.0 scrape
+> tsx src/index.ts
+
+[15:55:37] info: ═══════════════════════════════════════════
+[15:55:37] info:   BXT-SCRAPPER — Price Finder              
+[15:55:37] info: ═══════════════════════════════════════════
+[15:55:37] info:   Category : MAPPING REFURBISHED
+[15:55:37] info:   Target   : backmarket
+[15:55:37] info:   Mode     : FRESH
+[15:55:37] info: ═══════════════════════════════════════════
+[15:55:37] info: Loaded 3317 products from CSV
+[15:55:37] info: 🗑️ Fresh mode: deleted old output /Volumes/BISMILLAH/PROJECTS/BXT-SCRAPPER-NEW/output/backmarket_2026-05-13.csv
+[15:55:37] info: Launching stealth browser...
+[15:55:37] warn: No proxy configured — Amazon may block after ~10-20 requests
+[15:55:38] info: Browser launched successfully
+[15:55:38] info: Gemini API key pool loaded: 22 key(s) available.
+[15:55:38] info: [1/50] Processing: Apple iMac 2017 (i5, 8GB RAM, 1TB) - Excellent
+[15:55:38] info:   Original : "Apple iMac 2017 (i5, 8GB RAM, 1TB) - Excellent"
+[15:55:38] info:   Broad    : "Apple iMac 2017"
+[15:55:38] info: Checking Backmarket login status...
+[15:55:40] info: Already logged into Backmarket.
+[15:55:40] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202017&t=1778662540793
+[15:55:47] info: Found 0 results on Backmarket.
+[15:55:47] info: [1/50] ❌ no_match
+[15:55:48] info: [2/50] Processing: Apple iMac 2017 21.5" (i5, 8GB RAM, 256GB) - Excellent
+[15:55:48] info:   Original : "Apple iMac 2017 21.5" (i5, 8GB RAM, 256GB) - Excellent"
+[15:55:48] info:   Broad    : "Apple iMac 2017 21.5""
+[15:55:48] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202017%2021.5"&t=1778662548980
+[15:55:55] info: Found 0 results on Backmarket.
+[15:55:55] info: [2/50] ❌ no_match
+Stopping scraper (PID: 41374)...
+[15:55:55] warn: Received SIGINT. Shutting down gracefully...
+Scraper process exited with code 130
+Executing: npm run scrape (target: backmarket)
+
+> bxt-scrapper@1.0.0 scrape
+> tsx src/index.ts
+
+[15:59:51] info: ═══════════════════════════════════════════
+[15:59:51] info:   BXT-SCRAPPER — Price Finder              
+[15:59:51] info: ═══════════════════════════════════════════
+[15:59:51] info:   Category : MAPPING REFURBISHED
+[15:59:51] info:   Target   : backmarket
+[15:59:51] info:   Mode     : FRESH
+[15:59:51] info: ═══════════════════════════════════════════
+[15:59:51] info: Loaded 3317 products from CSV
+[15:59:51] info: 🗑️ Fresh mode: deleted old output /Volumes/BISMILLAH/PROJECTS/BXT-SCRAPPER-NEW/output/backmarket_2026-05-13.csv
+[15:59:51] info: Launching stealth browser...
+[15:59:51] warn: No proxy configured — Amazon may block after ~10-20 requests
+[15:59:53] info: Browser launched successfully
+[15:59:53] info: Gemini API key pool loaded: 22 key(s) available.
+[15:59:53] info: [1/50] Processing: Apple iMac 2017 (i5, 8GB RAM, 1TB) - Excellent
+[15:59:53] info:   Original : "Apple iMac 2017 (i5, 8GB RAM, 1TB) - Excellent"
+[15:59:53] info:   Broad    : "Apple iMac 2017"
+[15:59:53] info: Checking Backmarket login status...
+[16:00:00] info: Already logged into Backmarket.
+[16:00:00] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202017&t=1778662800086
+[16:00:06] info: Found 0 results on Backmarket.
+[16:00:06] info: [1/50] ❌ no_match
+[16:00:07] info: [2/50] Processing: Apple iMac 2017 21.5" (i5, 8GB RAM, 256GB) - Excellent
+[16:00:07] info:   Original : "Apple iMac 2017 21.5" (i5, 8GB RAM, 256GB) - Excellent"
+[16:00:07] info:   Broad    : "Apple iMac 2017 21.5""
+[16:00:07] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202017%2021.5"&t=1778662807705
+[16:00:14] info: Found 0 results on Backmarket.
+[16:00:14] info: [2/50] ❌ no_match
+[16:00:17] info: [3/50] Processing: Apple iMac 2017 27" (i5, 8GB RAM, 2TB) - Excellent
+[16:00:17] info:   Original : "Apple iMac 2017 27" (i5, 8GB RAM, 2TB) - Excellent"
+[16:00:17] info:   Broad    : "Apple iMac 2017 27""
+[16:00:17] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202017%2027"&t=1778662817460
+[16:00:25] info: Found 0 results on Backmarket.
+[16:00:25] info: [3/50] ❌ no_match
+[16:00:28] info: [4/50] Processing: Apple iMac 2017 27" (i7, 8GB RAM, 2TB) - Excellent
+[16:00:28] info:   Original : "Apple iMac 2017 27" (i7, 8GB RAM, 2TB) - Excellent"
+[16:00:28] info:   Broad    : "Apple iMac 2017 27""
+[16:00:28] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202017%2027"&t=1778662828123
+[16:00:58] error: Backmarket Search failed: page.goto: Timeout 30000ms exceeded.
+Call log:
+  - navigating to "https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202017%2027%22&t=1778662828123", waiting until "domcontentloaded"
+
+[16:00:58] info: [4/50] ❌ no_match
+[16:00:59] info: [5/50] Processing: Apple iMac 2019 21.5" (i5, 8GB RAM, 1TB) - Excellent
+[16:00:59] info:   Original : "Apple iMac 2019 21.5" (i5, 8GB RAM, 1TB) - Excellent"
+[16:00:59] info:   Broad    : "Apple iMac 2019 21.5""
+[16:00:59] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202019%2021.5"&t=1778662859364
+[16:01:29] error: Backmarket Search failed: page.goto: Timeout 30000ms exceeded.
+Call log:
+  - navigating to "https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202019%2021.5%22&t=1778662859364", waiting until "domcontentloaded"
+
+[16:01:29] info: [5/50] ❌ no_match
+[16:01:32] info: [6/50] Processing: Apple iMac 2019 21.5" (i7, 8GB RAM, 512GB) - Excellent
+[16:01:32] info:   Original : "Apple iMac 2019 21.5" (i7, 8GB RAM, 512GB) - Excellent"
+[16:01:32] info:   Broad    : "Apple iMac 2019 21.5""
+[16:01:32] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202019%2021.5"&t=1778662892080
+[16:02:02] error: Backmarket Search failed: page.goto: Timeout 30000ms exceeded.
+Call log:
+  - navigating to "https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202019%2021.5%22&t=1778662892080", waiting until "domcontentloaded"
+
+[16:02:02] info: [6/50] ❌ no_match
+[16:02:04] info: [7/50] Processing: Apple iMac 2020 5K (i5, 16GB RAM, 1TB) - Excellent
+[16:02:04] info:   Original : "Apple iMac 2020 5K (i5, 16GB RAM, 1TB) - Excellent"
+[16:02:04] info:   Broad    : "Apple iMac 2020 5K"
+[16:02:04] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202020%205K&t=1778662924076
+[16:02:34] error: Backmarket Search failed: page.goto: Timeout 30000ms exceeded.
+Call log:
+  - navigating to "https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202020%205K&t=1778662924076", waiting until "domcontentloaded"
+
+[16:02:34] info: [7/50] ❌ no_match
+[16:02:36] info: [8/50] Processing: Apple iMac 2021 (M1, 16GB RAM, 2TB, Blue) - Excellent
+[16:02:36] info:   Original : "Apple iMac 2021 (M1, 16GB RAM, 2TB, Blue) - Excellent"
+[16:02:36] info:   Broad    : "Apple iMac 2021"
+[16:02:36] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202021&t=1778662956156
+[16:03:06] error: Backmarket Search failed: page.goto: Timeout 30000ms exceeded.
+Call log:
+  - navigating to "https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202021&t=1778662956156", waiting until "domcontentloaded"
+
+[16:03:06] info: [8/50] ❌ no_match
+[16:03:07] info: [9/50] Processing: Apple iMac 2021 (M1, 8GB RAM, 256GB, 7 Core GPU, Pink Red, 24inc) - Excellent
+[16:03:07] info:   Original : "Apple iMac 2021 (M1, 8GB RAM, 256GB, 7 Core GPU, Pink Red, 24inc) - Excellent"
+[16:03:07] info:   Broad    : "Apple iMac 2021"
+[16:03:07] info: Searching via URL: https://www.backmarket.com.au/en-au/search?q=Apple%20iMac%202021&t=1778662987862
+Stopping scraper (PID: 42508)...
+[16:03:29] warn: Received SIGINT. Shutting down gracefully...
+Scraper process exited with code 130
+➜  BXT-SCRAPPER-NEW git:(main) npm run config
+
+
+> bxt-scrapper@1.0.0 config
+> tsx src/config-ui.ts
+
+
+======================================================
+🚀 Configuration UI is running at: http://localhost:3333
+======================================================
+
+Executing: npm run scrape (target: backmarket)
+(node:25249) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+> bxt-scrapper@1.0.0 scrape
+> tsx src/index.ts
+
+[21:56:13] info: ═══════════════════════════════════════════
+[21:56:13] info:   BXT-SCRAPPER — Price Finder              
+[21:56:13] info: ═══════════════════════════════════════════
+[21:56:13] info:   Category : MAPPING REFURBISHED
+[21:56:13] info:   Target   : backmarket
+[21:56:13] info:   Mode     : FRESH
+[21:56:13] info: ═══════════════════════════════════════════
+[21:56:13] info: Loaded 3317 products from CSV
+[21:56:13] info: Preparing environment...
+[21:56:13] info: Checking for running Chrome instances (Mac)...
+[21:56:15] info: Launching stealth browser...
+[21:56:15] info: Using Chrome profile at: /Users/ridho/Library/Application Support/Google/Chrome
+[21:56:15] warn: No proxy configured — Amazon may block after ~10-20 requests
+➜  BXT-SCRAPPER-NEW git:(main) ✗ npm run config
+
+
+> bxt-scrapper@1.0.0 config
+> tsx src/config-ui.ts
+
+
+======================================================
+🚀 Configuration UI is running at: http://localhost:3333
+======================================================
+
+Executing: npm run scrape (target: backmarket)
+(node:27651) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+> bxt-scrapper@1.0.0 scrape
+> tsx src/index.ts
+
+[22:15:03] info: ═══════════════════════════════════════════
+[22:15:03] info:   BXT-SCRAPPER — Price Finder              
+[22:15:03] info: ═══════════════════════════════════════════
+[22:15:03] info:   Category : MAPPING REFURBISHED
+[22:15:03] info:   Target   : backmarket
+[22:15:03] info:   Mode     : FRESH
+[22:15:03] info: ═══════════════════════════════════════════
+[22:15:03] info: Loaded 3310 products from CSV
+[22:15:03] info: Preparing environment...
+[22:15:03] info: Checking for running Chrome instances (Mac)...
+[22:15:05] info: Launching stealth browser...
+[22:15:05] info: Using Chrome profile at: /Users/ridho/Library/Application Support/Google/Chrome
+[22:15:05] warn: No proxy configured — Amazon may block after ~10-20 requests
+[22:18:35] error: Fatal: browserType.launchPersistentContext: Timeout 180000ms exceeded.
+Call log:
+  - <launching> /Applications/Google Chrome.app/Contents/MacOS/Google Chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --no-sandbox --disable-blink-features=AutomationControlled --no-sandbox --disable-dev-shm-usage --user-data-dir=/Users/ridho/Library/Application Support/Google/Chrome --remote-debugging-pipe about:blank
+  - <launched> pid=27991
+  - [pid=27991][err]
+  - [pid=27991][err] DevTools remote debugging requires a non-default data directory. Specify this using --user-data-dir.
+  - [pid=27991][err] Trying to load the allocator multiple times. This is *not* supported.
+  - [pid=27991][err] [27991:5382919:0514/221509.053403:ERROR:google_apis/gcm/engine/gcm_store_impl.cc:941] Failed to restore security token.
+  - [pid=27991][err] [27991:5382920:0514/221509.466232:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+  - [pid=27991][err] [28078:5383916:0514/221524.718645:VERBOSE1:chrome/updater/updater.cc:352] Version: 149.0.7814.0, opt, ARM_64, command line: /Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --wake-all --enable-logging --vmodule=*/components/update_client/*=2,*/chrome/enterprise_companion/*=2,*/chrome/updater/*=2
+  - [pid=27991][err] [28078:5383916:0514/221524.718760:VERBOSE1:chrome/updater/updater.cc:355] OS version: 26.4.1, arch: arm64, System uptime (seconds): 214958, parent pid: 27991
+  - [pid=27991][err] [28078:5383916:0514/221524.720431:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS START event to the history log
+  - [pid=27991][err] [28080:5383920:0514/221524.726478:VERBOSE1:chrome/updater/updater.cc:352] Version: 149.0.7814.0, opt, ARM_64, command line: /Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --crash-handler --database=/Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/Crashpad --url=https://clients2.google.com/cr/report --annotation=prod=Update4 --annotation=ver=149.0.7814.0 --handshake-fd=6 --enable-logging --vmodule=*/components/update_client/*=2,*/chrome/enterprise_companion/*=2,*/chrome/updater/*=2
+  - [pid=27991][err] [28080:5383920:0514/221524.726592:VERBOSE1:chrome/updater/updater.cc:355] OS version: 26.4.1, arch: arm64, System uptime (seconds): 214958, parent pid: 1
+  - [pid=27991][err] [28080:5383920:0514/221524.728020:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS START event to the history log
+  - [pid=27991][err] [28078:5383916:0514/221524.728316:VERBOSE1:chrome/updater/crash_reporter.cc:124] Crash handler launched and ready.
+  - [pid=27991][err] [28078:5383916:0514/221524.728781:VERBOSE1:chrome/updater/crash_client.cc:108] Found 0 completed crash reports
+  - [pid=27991][err] [28078:5383916:0514/221524.728834:VERBOSE1:chrome/updater/crash_client.cc:132] Found 0 pending crash reports
+  - [pid=27991][err] [28078:5383916:0514/221524.728885:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/RLZ/Crashpad/settings.dat: No such file or directory (2)
+  - [pid=27991][err] [28078:5383916:0514/221524.728894:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/consentOptions/Crashpad/settings.dat: No such file or directory (2)
+  - [pid=27991][err] [28078:5383916:0514/221524.728900:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/Android File Transfer/Crashpad/settings.dat: No such file or directory (2)
+  - [pid=27991][err] [28078:5383916:0514/221524.728925:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/AndroidStudio2025.1.2/Crashpad/settings.dat: No such file or directory (2)
+  - [pid=27991][err] [28078:5383916:0514/221524.728935:VERBOSE1:chrome/updater/updater.cc:103] Crash reporting initialized.
+  - [pid=27991][err] [28078:5383928:0514/221524.729090:VERBOSE1:chrome/updater/app/app_wakeall.cc:58] Launching `/Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --wake`
+  - [pid=27991][err] [28081:5383932:0514/221524.734654:VERBOSE1:chrome/updater/updater.cc:352] Version: 149.0.7814.0, opt, ARM_64, command line: /Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --wake --enable-logging --vmodule=*/components/update_client/*=2,*/chrome/enterprise_companion/*=2,*/chrome/updater/*=2
+  - [pid=27991][err] [28081:5383932:0514/221524.734778:VERBOSE1:chrome/updater/updater.cc:355] OS version: 26.4.1, arch: arm64, System uptime (seconds): 214958, parent pid: 28078
+  - [pid=27991][err] [28081:5383932:0514/221524.736530:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS START event to the history log
+  - [pid=27991][err] [28083:5383937:0514/221524.743010:VERBOSE1:chrome/updater/updater.cc:352] Version: 149.0.7814.0, opt, ARM_64, command line: /Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --crash-handler --database=/Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/Crashpad --url=https://clients2.google.com/cr/report --annotation=prod=Update4 --annotation=ver=149.0.7814.0 --handshake-fd=6 --enable-logging --vmodule=*/components/update_client/*=2,*/chrome/enterprise_companion/*=2,*/chrome/updater/*=2
+  - [pid=27991][err] [28083:5383937:0514/221524.743143:VERBOSE1:chrome/updater/updater.cc:355] OS version: 26.4.1, arch: arm64, System uptime (seconds): 214958, parent pid: 1
+  - [pid=27991][err] [28083:5383937:0514/221524.745021:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS START event to the history log
+  - [pid=27991][err] [28081:5383932:0514/221524.745370:VERBOSE1:chrome/updater/crash_reporter.cc:124] Crash handler launched and ready.
+  - [pid=27991][err] [28081:5383932:0514/221524.745833:VERBOSE1:chrome/updater/crash_client.cc:108] Found 0 completed crash reports
+  - [pid=27991][err] [28081:5383932:0514/221524.745885:VERBOSE1:chrome/updater/crash_client.cc:132] Found 0 pending crash reports
+  - [pid=27991][err] [28081:5383932:0514/221524.745950:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/RLZ/Crashpad/settings.dat: No such file or directory (2)
+  - [pid=27991][err] [28081:5383932:0514/221524.745958:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/consentOptions/Crashpad/settings.dat: No such file or directory (2)
+  - [pid=27991][err] [28081:5383932:0514/221524.745964:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/Android File Transfer/Crashpad/settings.dat: No such file or directory (2)
+  - [pid=27991][err] [28081:5383932:0514/221524.745996:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/AndroidStudio2025.1.2/Crashpad/settings.dat: No such file or directory (2)
+  - [pid=27991][err] [28081:5383932:0514/221524.746007:VERBOSE1:chrome/updater/updater.cc:103] Crash reporting initialized.
+  - [pid=27991][err] [28081:5383932:0514/221524.746120:VERBOSE1:chrome/updater/ipc/update_service_internal_proxy_mojo.cc:61] Run
+  - [pid=27991][err] [27991:5382920:0514/221531.132096:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+  - [pid=27991][err] [28081:5383932:0514/221541.080298:VERBOSE1:chrome/updater/app/app.cc:52] Shutdown: 0
+  - [pid=27991][err] [28081:5383932:0514/221541.081027:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS END event to the history log
+  - [pid=27991][err] [28081:5383932:0514/221541.081052:VERBOSE1:chrome/updater/updater.cc:390] UpdaterMain (--wake) returned 0.
+  - [pid=27991][err] [28078:5383928:0514/221541.248048:VERBOSE1:chrome/updater/app/app_wakeall.cc:68] `/Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --wake` exited 0
+  - [pid=27991][err] [28078:5383916:0514/221541.248633:VERBOSE1:chrome/updater/app/app.cc:52] Shutdown: 0
+  - [pid=27991][err] [28078:5383916:0514/221541.249608:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS END event to the history log
+  - [pid=27991][err] [28078:5383916:0514/221541.249646:VERBOSE1:chrome/updater/updater.cc:390] UpdaterMain (--wake-all) returned 0.
+  - [pid=27991][err] [28083:5383937:0514/221551.095650:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS END event to the history log
+  - [pid=27991][err] [28083:5383937:0514/221551.095738:VERBOSE1:chrome/updater/updater.cc:390] UpdaterMain (--crash-handler) returned 0.
+  - [pid=27991][err] [28080:5383920:0514/221551.099478:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS END event to the history log
+  - [pid=27991][err] [28080:5383920:0514/221551.099561:VERBOSE1:chrome/updater/updater.cc:390] UpdaterMain (--crash-handler) returned 0.
+  - [pid=27991][err] [27991:5382920:0514/221617.058647:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+  - [pid=27991][err] [27991:5382920:0514/221802.496190:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+
+Scraper process exited with code 1
+Executing: npm run scrape (target: backmarket)
+
+> bxt-scrapper@1.0.0 scrape
+> tsx src/index.ts
+
+[09:43:48] info: ═══════════════════════════════════════════
+[09:43:48] info:   BXT-SCRAPPER — Price Finder              
+[09:43:48] info: ═══════════════════════════════════════════
+[09:43:48] info:   Category : MAPPING REFURBISHED
+[09:43:48] info:   Target   : backmarket
+[09:43:48] info:   Mode     : FRESH
+[09:43:48] info: ═══════════════════════════════════════════
+[09:43:48] info: Loaded 3301 products from CSV
+[09:43:48] info: Preparing environment...
+[09:43:48] info: Checking for running Chrome instances (Mac)...
+[09:43:49] info: Launching stealth browser...
+[09:43:49] info: Using Chrome user data dir: /Users/ridho/Library/Application Support/Google/Chrome
+[09:43:49] info: Detected active Chrome profile: Profile 51
+[09:43:49] warn: No proxy configured — Amazon may block after ~10-20 requests
+Stopping scraper (PID: 5989)...
+[09:46:46] warn: Received SIGINT. Shutting down gracefully...
+Scraper process exited with code 130
+Executing: npm run scrape (target: backmarket)
+
+> bxt-scrapper@1.0.0 scrape
+> tsx src/index.ts
+
+[09:46:50] info: ═══════════════════════════════════════════
+[09:46:50] info:   BXT-SCRAPPER — Price Finder              
+[09:46:50] info: ═══════════════════════════════════════════
+[09:46:50] info:   Category : MAPPING REFURBISHED
+[09:46:50] info:   Target   : backmarket
+[09:46:50] info:   Mode     : FRESH
+[09:46:50] info: ═══════════════════════════════════════════
+[09:46:50] info: Loaded 3301 products from CSV
+[09:46:50] info: Preparing environment...
+[09:46:50] info: Checking for running Chrome instances (Mac)...
+[09:46:52] info: Launching stealth browser...
+[09:46:52] info: Using Chrome user data dir: /Users/ridho/Library/Application Support/Google/Chrome
+[09:46:52] info: Detected active Chrome profile: Profile 51
+[09:46:52] warn: No proxy configured — Amazon may block after ~10-20 requests
+➜  BXT-SCRAPPER-NEW git:(main) ✗ npm run config
+
+
+> bxt-scrapper@1.0.0 config
+> tsx src/config-ui.ts
+
+
+======================================================
+🚀 Configuration UI is running at: http://localhost:3333
+======================================================
+
+Executing: npm run scrape (target: backmarket)
+(node:6901) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+> bxt-scrapper@1.0.0 scrape
+> tsx src/index.ts
+
+[09:47:25] info: ═══════════════════════════════════════════
+[09:47:25] info:   BXT-SCRAPPER — Price Finder              
+[09:47:25] info: ═══════════════════════════════════════════
+[09:47:25] info:   Category : MAPPING REFURBISHED
+[09:47:25] info:   Target   : backmarket
+[09:47:25] info:   Mode     : FRESH
+[09:47:25] info: ═══════════════════════════════════════════
+[09:47:25] info: Loaded 3301 products from CSV
+[09:47:25] info: Preparing environment...
+[09:47:25] info: Checking for running Chrome instances (Mac)...
+[09:47:26] info: Launching stealth browser...
+[09:47:26] info: Using Chrome user data dir: /Users/ridho/Library/Application Support/Google/Chrome
+[09:47:26] info: Detected active Chrome profile: Profile 51
+[09:47:26] warn: No proxy configured — Amazon may block after ~10-20 requests
+Stopping scraper (PID: 6927)...
+[09:47:50] warn: Received SIGINT. Shutting down gracefully...
+Scraper process exited with code 130
+Executing: npm run scrape (target: backmarket)
+
+> bxt-scrapper@1.0.0 scrape
+> tsx src/index.ts
+
+[09:47:56] info: ═══════════════════════════════════════════
+[09:47:56] info:   BXT-SCRAPPER — Price Finder              
+[09:47:56] info: ═══════════════════════════════════════════
+[09:47:56] info:   Category : MAPPING REFURBISHED
+[09:47:56] info:   Target   : backmarket
+[09:47:56] info:   Mode     : FRESH
+[09:47:56] info: ═══════════════════════════════════════════
+[09:47:56] info: Loaded 3301 products from CSV
+[09:47:56] info: Preparing environment...
+[09:47:56] info: Checking for running Chrome instances (Mac)...
+[09:47:57] info: Launching stealth browser...
+[09:47:57] info: Using Chrome user data dir: /Users/ridho/Library/Application Support/Google/Chrome
+[09:47:57] info: Detected active Chrome profile: Profile 30
+[09:47:57] warn: No proxy configured — Amazon may block after ~10-20 requests
+[09:48:45] error: Fatal: browserType.launchPersistentContext: Target page, context or browser has been closed
+Browser logs:
+
+<launching> /Applications/Google Chrome.app/Contents/MacOS/Google Chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --no-sandbox --disable-blink-features=AutomationControlled --no-sandbox --disable-dev-shm-usage --profile-directory=Profile 30 --user-data-dir=/Users/ridho/Library/Application Support/Google/Chrome --remote-debugging-pipe about:blank
+<launched> pid=7140
+[pid=7140][err] 
+[pid=7140][err] DevTools remote debugging requires a non-default data directory. Specify this using --user-data-dir.
+[pid=7140][err] [7140:6230836:0515/094758.277506:ERROR:components/signin/public/webdata/token_service_table.cc:246] Failed to decrypt token for service AccountId-117286441034795842803
+[pid=7140][err] Trying to load the allocator multiple times. This is *not* supported.
+[pid=7140][err] [7140:6230840:0515/094800.726754:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[pid=7140][err] [7216:6231721:0515/094817.029321:VERBOSE1:chrome/updater/updater.cc:352] Version: 149.0.7814.0, opt, ARM_64, command line: /Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --wake-all --enable-logging --vmodule=*/components/update_client/*=2,*/chrome/enterprise_companion/*=2,*/chrome/updater/*=2
+[pid=7140][err] [7216:6231721:0515/094817.029498:VERBOSE1:chrome/updater/updater.cc:355] OS version: 26.4.1, arch: arm64, System uptime (seconds): 256530, parent pid: 7140
+[pid=7140][err] [7216:6231721:0515/094817.033214:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS START event to the history log
+[pid=7140][err] [7218:6231725:0515/094817.040284:VERBOSE1:chrome/updater/updater.cc:352] Version: 149.0.7814.0, opt, ARM_64, command line: /Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --crash-handler --database=/Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/Crashpad --url=https://clients2.google.com/cr/report --annotation=prod=Update4 --annotation=ver=149.0.7814.0 --handshake-fd=6 --enable-logging --vmodule=*/components/update_client/*=2,*/chrome/enterprise_companion/*=2,*/chrome/updater/*=2
+[pid=7140][err] [7218:6231725:0515/094817.040413:VERBOSE1:chrome/updater/updater.cc:355] OS version: 26.4.1, arch: arm64, System uptime (seconds): 256530, parent pid: 1
+[pid=7140][err] [7218:6231725:0515/094817.042075:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS START event to the history log
+[pid=7140][err] [7216:6231721:0515/094817.042414:VERBOSE1:chrome/updater/crash_reporter.cc:124] Crash handler launched and ready.
+[pid=7140][err] [7216:6231721:0515/094817.042932:VERBOSE1:chrome/updater/crash_client.cc:108] Found 0 completed crash reports
+[pid=7140][err] [7216:6231721:0515/094817.042986:VERBOSE1:chrome/updater/crash_client.cc:132] Found 0 pending crash reports
+[pid=7140][err] [7216:6231721:0515/094817.043042:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/RLZ/Crashpad/settings.dat: No such file or directory (2)
+[pid=7140][err] [7216:6231721:0515/094817.043054:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/consentOptions/Crashpad/settings.dat: No such file or directory (2)
+[pid=7140][err] [7216:6231721:0515/094817.043060:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/Android File Transfer/Crashpad/settings.dat: No such file or directory (2)
+[pid=7140][err] [7216:6231721:0515/094817.043091:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/AndroidStudio2025.1.2/Crashpad/settings.dat: No such file or directory (2)
+[pid=7140][err] [7216:6231721:0515/094817.043100:VERBOSE1:chrome/updater/updater.cc:103] Crash reporting initialized.
+[pid=7140][err] [7216:6231733:0515/094817.043281:VERBOSE1:chrome/updater/app/app_wakeall.cc:58] Launching `/Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --wake`
+[pid=7140][err] [7219:6231737:0515/094817.049048:VERBOSE1:chrome/updater/updater.cc:352] Version: 149.0.7814.0, opt, ARM_64, command line: /Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --wake --enable-logging --vmodule=*/components/update_client/*=2,*/chrome/enterprise_companion/*=2,*/chrome/updater/*=2
+[pid=7140][err] [7219:6231737:0515/094817.049159:VERBOSE1:chrome/updater/updater.cc:355] OS version: 26.4.1, arch: arm64, System uptime (seconds): 256530, parent pid: 7216
+[pid=7140][err] [7219:6231737:0515/094817.050655:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS START event to the history log
+[pid=7140][err] [7221:6231741:0515/094817.056753:VERBOSE1:chrome/updater/updater.cc:352] Version: 149.0.7814.0, opt, ARM_64, command line: /Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --crash-handler --database=/Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/Crashpad --url=https://clients2.google.com/cr/report --annotation=prod=Update4 --annotation=ver=149.0.7814.0 --handshake-fd=6 --enable-logging --vmodule=*/components/update_client/*=2,*/chrome/enterprise_companion/*=2,*/chrome/updater/*=2
+[pid=7140][err] [7221:6231741:0515/094817.056860:VERBOSE1:chrome/updater/updater.cc:355] OS version: 26.4.1, arch: arm64, System uptime (seconds): 256530, parent pid: 1
+[pid=7140][err] [7221:6231741:0515/094817.058274:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS START event to the history log
+[pid=7140][err] [7219:6231737:0515/094817.058579:VERBOSE1:chrome/updater/crash_reporter.cc:124] Crash handler launched and ready.
+[pid=7140][err] [7219:6231737:0515/094817.059068:VERBOSE1:chrome/updater/crash_client.cc:108] Found 0 completed crash reports
+[pid=7140][err] [7219:6231737:0515/094817.059139:VERBOSE1:chrome/updater/crash_client.cc:132] Found 0 pending crash reports
+[pid=7140][err] [7219:6231737:0515/094817.059200:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/RLZ/Crashpad/settings.dat: No such file or directory (2)
+[pid=7140][err] [7219:6231737:0515/094817.059210:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/consentOptions/Crashpad/settings.dat: No such file or directory (2)
+[pid=7140][err] [7219:6231737:0515/094817.059216:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/Android File Transfer/Crashpad/settings.dat: No such file or directory (2)
+[pid=7140][err] [7219:6231737:0515/094817.059244:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/AndroidStudio2025.1.2/Crashpad/settings.dat: No such file or directory (2)
+[pid=7140][err] [7219:6231737:0515/094817.059255:VERBOSE1:chrome/updater/updater.cc:103] Crash reporting initialized.
+[pid=7140][err] [7219:6231737:0515/094817.059373:VERBOSE1:chrome/updater/ipc/update_service_internal_proxy_mojo.cc:61] Run
+[pid=7140][err] [7140:6230840:0515/094825.873787:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[pid=7140][err] [7219:6231737:0515/094832.973562:VERBOSE1:chrome/updater/app/app.cc:52] Shutdown: 0
+[pid=7140][err] [7219:6231737:0515/094832.974258:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS END event to the history log
+[pid=7140][err] [7219:6231737:0515/094832.974282:VERBOSE1:chrome/updater/updater.cc:390] UpdaterMain (--wake) returned 0.
+[pid=7140][err] [7216:6231733:0515/094833.008330:VERBOSE1:chrome/updater/app/app_wakeall.cc:68] `/Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --wake` exited 0
+[pid=7140][err] [7216:6231721:0515/094833.008536:VERBOSE1:chrome/updater/app/app.cc:52] Shutdown: 0
+[pid=7140][err] [7216:6231721:0515/094833.008800:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS END event to the history log
+[pid=7140][err] [7216:6231721:0515/094833.008811:VERBOSE1:chrome/updater/updater.cc:390] UpdaterMain (--wake-all) returned 0.
+[pid=7140][err] [7221:6231741:0515/094842.981787:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS END event to the history log
+[pid=7140][err] [7221:6231741:0515/094842.981816:VERBOSE1:chrome/updater/updater.cc:390] UpdaterMain (--crash-handler) returned 0.
+[pid=7140][err] [7218:6231725:0515/094842.982942:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS END event to the history log
+[pid=7140][err] [7218:6231725:0515/094842.982961:VERBOSE1:chrome/updater/updater.cc:390] UpdaterMain (--crash-handler) returned 0.
+[pid=7140][err] [7140:6230840:0515/094844.922887:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[pid=7140][err] [7140:6230816:0515/094844.948818:ERROR:content/browser/gpu/gpu_process_host.cc:999] GPU process exited unexpectedly: exit_code=15
+Call log:
+  - <launching> /Applications/Google Chrome.app/Contents/MacOS/Google Chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,BoundaryEventDispatchTracksNodeRemoval,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,Translate,AutoDeElevate,RenderDocument,OptimizationHints --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --enable-automation --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --no-sandbox --disable-blink-features=AutomationControlled --no-sandbox --disable-dev-shm-usage --profile-directory=Profile 30 --user-data-dir=/Users/ridho/Library/Application Support/Google/Chrome --remote-debugging-pipe about:blank
+  - <launched> pid=7140
+  - [pid=7140][err]
+  - [pid=7140][err] DevTools remote debugging requires a non-default data directory. Specify this using --user-data-dir.
+  - [pid=7140][err] [7140:6230836:0515/094758.277506:ERROR:components/signin/public/webdata/token_service_table.cc:246] Failed to decrypt token for service AccountId-117286441034795842803
+  - [pid=7140][err] Trying to load the allocator multiple times. This is *not* supported.
+  - [pid=7140][err] [7140:6230840:0515/094800.726754:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+  - [pid=7140][err] [7216:6231721:0515/094817.029321:VERBOSE1:chrome/updater/updater.cc:352] Version: 149.0.7814.0, opt, ARM_64, command line: /Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --wake-all --enable-logging --vmodule=*/components/update_client/*=2,*/chrome/enterprise_companion/*=2,*/chrome/updater/*=2
+  - [pid=7140][err] [7216:6231721:0515/094817.029498:VERBOSE1:chrome/updater/updater.cc:355] OS version: 26.4.1, arch: arm64, System uptime (seconds): 256530, parent pid: 7140
+  - [pid=7140][err] [7216:6231721:0515/094817.033214:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS START event to the history log
+  - [pid=7140][err] [7218:6231725:0515/094817.040284:VERBOSE1:chrome/updater/updater.cc:352] Version: 149.0.7814.0, opt, ARM_64, command line: /Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --crash-handler --database=/Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/Crashpad --url=https://clients2.google.com/cr/report --annotation=prod=Update4 --annotation=ver=149.0.7814.0 --handshake-fd=6 --enable-logging --vmodule=*/components/update_client/*=2,*/chrome/enterprise_companion/*=2,*/chrome/updater/*=2
+  - [pid=7140][err] [7218:6231725:0515/094817.040413:VERBOSE1:chrome/updater/updater.cc:355] OS version: 26.4.1, arch: arm64, System uptime (seconds): 256530, parent pid: 1
+  - [pid=7140][err] [7218:6231725:0515/094817.042075:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS START event to the history log
+  - [pid=7140][err] [7216:6231721:0515/094817.042414:VERBOSE1:chrome/updater/crash_reporter.cc:124] Crash handler launched and ready.
+  - [pid=7140][err] [7216:6231721:0515/094817.042932:VERBOSE1:chrome/updater/crash_client.cc:108] Found 0 completed crash reports
+  - [pid=7140][err] [7216:6231721:0515/094817.042986:VERBOSE1:chrome/updater/crash_client.cc:132] Found 0 pending crash reports
+  - [pid=7140][err] [7216:6231721:0515/094817.043042:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/RLZ/Crashpad/settings.dat: No such file or directory (2)
+  - [pid=7140][err] [7216:6231721:0515/094817.043054:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/consentOptions/Crashpad/settings.dat: No such file or directory (2)
+  - [pid=7140][err] [7216:6231721:0515/094817.043060:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/Android File Transfer/Crashpad/settings.dat: No such file or directory (2)
+  - [pid=7140][err] [7216:6231721:0515/094817.043091:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/AndroidStudio2025.1.2/Crashpad/settings.dat: No such file or directory (2)
+  - [pid=7140][err] [7216:6231721:0515/094817.043100:VERBOSE1:chrome/updater/updater.cc:103] Crash reporting initialized.
+  - [pid=7140][err] [7216:6231733:0515/094817.043281:VERBOSE1:chrome/updater/app/app_wakeall.cc:58] Launching `/Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --wake`
+  - [pid=7140][err] [7219:6231737:0515/094817.049048:VERBOSE1:chrome/updater/updater.cc:352] Version: 149.0.7814.0, opt, ARM_64, command line: /Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --wake --enable-logging --vmodule=*/components/update_client/*=2,*/chrome/enterprise_companion/*=2,*/chrome/updater/*=2
+  - [pid=7140][err] [7219:6231737:0515/094817.049159:VERBOSE1:chrome/updater/updater.cc:355] OS version: 26.4.1, arch: arm64, System uptime (seconds): 256530, parent pid: 7216
+  - [pid=7140][err] [7219:6231737:0515/094817.050655:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS START event to the history log
+  - [pid=7140][err] [7221:6231741:0515/094817.056753:VERBOSE1:chrome/updater/updater.cc:352] Version: 149.0.7814.0, opt, ARM_64, command line: /Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --crash-handler --database=/Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/Crashpad --url=https://clients2.google.com/cr/report --annotation=prod=Update4 --annotation=ver=149.0.7814.0 --handshake-fd=6 --enable-logging --vmodule=*/components/update_client/*=2,*/chrome/enterprise_companion/*=2,*/chrome/updater/*=2
+  - [pid=7140][err] [7221:6231741:0515/094817.056860:VERBOSE1:chrome/updater/updater.cc:355] OS version: 26.4.1, arch: arm64, System uptime (seconds): 256530, parent pid: 1
+  - [pid=7140][err] [7221:6231741:0515/094817.058274:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS START event to the history log
+  - [pid=7140][err] [7219:6231737:0515/094817.058579:VERBOSE1:chrome/updater/crash_reporter.cc:124] Crash handler launched and ready.
+  - [pid=7140][err] [7219:6231737:0515/094817.059068:VERBOSE1:chrome/updater/crash_client.cc:108] Found 0 completed crash reports
+  - [pid=7140][err] [7219:6231737:0515/094817.059139:VERBOSE1:chrome/updater/crash_client.cc:132] Found 0 pending crash reports
+  - [pid=7140][err] [7219:6231737:0515/094817.059200:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/RLZ/Crashpad/settings.dat: No such file or directory (2)
+  - [pid=7140][err] [7219:6231737:0515/094817.059210:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/consentOptions/Crashpad/settings.dat: No such file or directory (2)
+  - [pid=7140][err] [7219:6231737:0515/094817.059216:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/Android File Transfer/Crashpad/settings.dat: No such file or directory (2)
+  - [pid=7140][err] [7219:6231737:0515/094817.059244:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/ridho/Library/Application Support/Google/AndroidStudio2025.1.2/Crashpad/settings.dat: No such file or directory (2)
+  - [pid=7140][err] [7219:6231737:0515/094817.059255:VERBOSE1:chrome/updater/updater.cc:103] Crash reporting initialized.
+  - [pid=7140][err] [7219:6231737:0515/094817.059373:VERBOSE1:chrome/updater/ipc/update_service_internal_proxy_mojo.cc:61] Run
+  - [pid=7140][err] [7140:6230840:0515/094825.873787:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+  - [pid=7140][err] [7219:6231737:0515/094832.973562:VERBOSE1:chrome/updater/app/app.cc:52] Shutdown: 0
+  - [pid=7140][err] [7219:6231737:0515/094832.974258:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS END event to the history log
+  - [pid=7140][err] [7219:6231737:0515/094832.974282:VERBOSE1:chrome/updater/updater.cc:390] UpdaterMain (--wake) returned 0.
+  - [pid=7140][err] [7216:6231733:0515/094833.008330:VERBOSE1:chrome/updater/app/app_wakeall.cc:68] `/Users/ridho/Library/Application Support/Google/GoogleUpdater/149.0.7814.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --wake` exited 0
+  - [pid=7140][err] [7216:6231721:0515/094833.008536:VERBOSE1:chrome/updater/app/app.cc:52] Shutdown: 0
+  - [pid=7140][err] [7216:6231721:0515/094833.008800:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS END event to the history log
+  - [pid=7140][err] [7216:6231721:0515/094833.008811:VERBOSE1:chrome/updater/updater.cc:390] UpdaterMain (--wake-all) returned 0.
+  - [pid=7140][err] [7221:6231741:0515/094842.981787:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS END event to the history log
+  - [pid=7140][err] [7221:6231741:0515/094842.981816:VERBOSE1:chrome/updater/updater.cc:390] UpdaterMain (--crash-handler) returned 0.
+  - [pid=7140][err] [7218:6231725:0515/094842.982942:VERBOSE2:chrome/updater/event_history.cc:265] Emitted a UPDATER_PROCESS END event to the history log
+  - [pid=7140][err] [7218:6231725:0515/094842.982961:VERBOSE1:chrome/updater/updater.cc:390] UpdaterMain (--crash-handler) returned 0.
+  - [pid=7140][err] [7140:6230840:0515/094844.922887:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+  - [pid=7140][err] [7140:6230816:0515/094844.948818:ERROR:content/browser/gpu/gpu_process_host.cc:999] GPU process exited unexpectedly: exit_code=15
+  - [pid=7140] <gracefully close start>
+  - [pid=7140] <kill>
+  - [pid=7140] <will force kill>
+  - [pid=7140] <process did exit: exitCode=0, signal=null>
+  - [pid=7140] starting temporary directories cleanup
+  - [pid=7140] finished temporary directories cleanup
+  - [pid=7140] <gracefully close end>
+
+Scraper process exited with code 1

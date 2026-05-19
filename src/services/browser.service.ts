@@ -53,19 +53,10 @@ export class BrowserService {
       }
     }
     
-    logger.info(`Using Chrome user data dir: ${userDataDir}`);
-
-    const activeProfile = this.getActiveChromeProfile(userDataDir);
-    const profileArg = activeProfile ? `--profile-directory=${activeProfile}` : undefined;
-    if (activeProfile) {
-      logger.info(`Detected active Chrome profile: ${activeProfile}`);
-    } else {
-      logger.info(`Using Default Chrome profile`);
-    }
-
     const launchOptions: Record<string, unknown> = {
       headless: false,
       channel: "chrome", // Uses real Google Chrome instead of Chromium
+      ignoreDefaultArgs: ["--use-mock-keychain", "--password-store=basic", "--enable-automation"],
       viewport: randomViewport(),
       locale: "en-AU",
       timezoneId: "Australia/Sydney",
@@ -79,7 +70,6 @@ export class BrowserService {
         "--disable-blink-features=AutomationControlled",
         "--no-sandbox",
         "--disable-dev-shm-usage",
-        ...(profileArg ? [profileArg] : []),
       ],
     };
 
@@ -178,25 +168,24 @@ export class BrowserService {
       }
       // Give it a second to release file locks
       await new Promise(resolve => setTimeout(resolve, 1500));
-    } catch (err) {
-      logger.warn(`Attempt to force close Chrome failed: ${(err as Error).message}`);
-    }
-  }
 
-  private getActiveChromeProfile(userDataDir: string): string | null {
-    try {
-      const localStatePath = path.join(userDataDir, "Local State");
-      if (fs.existsSync(localStatePath)) {
-        const localStateStr = fs.readFileSync(localStatePath, "utf-8");
-        const localState = JSON.parse(localStateStr);
-        if (localState && localState.profile && localState.profile.last_used) {
-          return localState.profile.last_used as string;
+      // Force delete SingletonLock files that might cause Playwright to hang
+      const userDataDir = config.chromeUserDataDir;
+      const lockFiles = ["SingletonLock", "SingletonCookie", "SingletonSocket"];
+      for (const file of lockFiles) {
+        const filePath = path.join(userDataDir, file);
+        if (fs.existsSync(filePath)) {
+          try {
+            fs.unlinkSync(filePath);
+            logger.info(`Cleared stale Chrome lock file: ${file}`);
+          } catch (e) {
+            logger.warn(`Could not delete ${file}: ${(e as Error).message}`);
+          }
         }
       }
     } catch (err) {
-      logger.warn(`Could not read Chrome Local State to detect active profile: ${(err as Error).message}`);
+      logger.warn(`Attempt to force close Chrome failed: ${(err as Error).message}`);
     }
-    return null;
   }
 
   async shutdown(): Promise<void> {

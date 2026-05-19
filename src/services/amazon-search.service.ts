@@ -4,7 +4,7 @@
 // ============================================================
 
 import type { Page } from "playwright";
-import type { AmazonSearchResult } from "../types/index.js";
+import type { AmazonSearchResult, BecexProduct } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { randomDelay } from "../utils/delay.js";
 import { humanType, humanClick, moveMouseRandomly, getModifierKey } from "../utils/human-interaction.js";
@@ -419,5 +419,200 @@ export class AmazonSearchService {
       // Take a screenshot for debugging if it fails
       await page.screenshot({ path: `./debug/postcode_fail_${Date.now()}.png` }).catch(() => {});
     }
+  }
+
+  /**
+   * Helper to clean Amazon URLs by removing search/tracking parameters.
+   */
+  private cleanAmazonUrl(rawUrl: string): string {
+    try {
+      const url = new URL(rawUrl);
+      const dpMatch = url.pathname.match(/\/dp\/([A-Z0-9]{10})/);
+      if (dpMatch) {
+        return `https://${this.amazonDomain}/dp/${dpMatch[1]}`;
+      }
+      return rawUrl.split("?")[0];
+    } catch {
+      return rawUrl;
+    }
+  }
+
+  /**
+   * Extracts price from product detail page, clicking "See All Buying Options" if needed.
+   */
+  async selectVariantsAndGetPrice(
+    page: Page,
+    product: BecexProduct
+  ): Promise<{ price: number | null; cleanUrl: string }> {
+    logger.info(`Extracting Amazon price details for: ${product.productName}`);
+    
+    // 1. Try to get price directly first
+    let price = await page.evaluate(() => {
+      const priceSelectors = [
+        ".a-price .a-offscreen",
+        "#priceblock_ourprice",
+        "#priceblock_dealprice",
+        ".a-price .a-price-whole",
+        "#corePrice_feature_div .a-price .a-offscreen",
+        "#apex_offerDisplay_desktop .a-price .a-offscreen",
+        ".apexPriceToPay .a-offscreen",
+      ];
+      for (const selector of priceSelectors) {
+        const el = document.querySelector(selector);
+        if (el) {
+          const text = el.textContent || "";
+          const match = text.replace(/[^0-9.]/g, "");
+          if (match) {
+            const parsed = parseFloat(match);
+            if (!isNaN(parsed) && parsed > 0) return parsed;
+          }
+        }
+      }
+      return null;
+    });
+
+    const cleanUrl = this.cleanAmazonUrl(page.url());
+
+    // 2. Check if "See All Buying Options" button exists and click it
+    const seeAllBtnSelector = "a:has-text('See All Buying Options'), span:has-text('See All Buying Options'), #buybox-see-all-buying-choices, [data-action='show-all-offers-display']";
+    const seeAllBtn = page.locator(seeAllBtnSelector).first();
+    const hasSeeAllBtn = await seeAllBtn.isVisible().catch(() => false);
+
+    if (hasSeeAllBtn) {
+      logger.info(`"See All Buying Options" button detected. Clicking to show pricing options...`);
+      try {
+        await seeAllBtn.click();
+        // Wait for the drawer/modal container to appear
+        await page.waitForSelector("#all-offers-display, #aod-container", { timeout: 8000 });
+        await randomDelay(1500, 3000); // Allow content to load fully
+
+        // Extract all options
+        const offers = await page.evaluate(() => {
+          const extracted: Array<{
+            price: number | null;
+            condition: string;
+            shipsFrom: string;
+            soldBy: string;
+          }> = [];
+
+          // A. Pinned Offer
+          const pinnedOffer = document.querySelector("#aod-pinned-offer");
+          if (pinnedOffer) {
+            let price: number | null = null;
+            const priceSelectors = [
+              ".a-price",
+              ".a-price .a-offscreen",
+              ".a-color-price",
+              ".a-price-whole"
+            ];
+            for (const selector of priceSelectors) {
+              const priceEl = pinnedOffer.querySelector(selector);
+              if (priceEl) {
+                const text = priceEl.textContent || "";
+                const match = text.replace(/[^0-9.]/g, "");
+                if (match) {
+                  const val = parseFloat(match);
+                  if (!isNaN(val) && val > 0) {
+                    price = val;
+                    break;
+                  }
+                }
+              }
+            }
+
+            const condEl = pinnedOffer.querySelector("[id$='-heading']") || 
+                           pinnedOffer.querySelector(".aod-offer-heading") ||
+                           pinnedOffer.querySelector(".aod-heading");
+            const condition = condEl && condEl.textContent ? condEl.textContent.replace(/\s+/g, " ").trim() : "";
+
+            const shipsEl = pinnedOffer.querySelector("[id$='-shipsFrom']") || 
+                            pinnedOffer.querySelector(".aod-shipfrom") ||
+                            pinnedOffer.querySelector("[id*='shipsFrom']");
+            const shipsValEl = shipsEl?.querySelector(".a-color-base") || shipsEl;
+            const shipsFrom = shipsValEl && shipsValEl.textContent ? shipsValEl.textContent.replace(/\s+/g, " ").trim() : "";
+
+            const soldEl = pinnedOffer.querySelector("[id$='-soldBy']") || 
+                           pinnedOffer.querySelector(".aod-soldby") ||
+                           pinnedOffer.querySelector("[id*='soldBy']");
+            const soldValEl = soldEl?.querySelector(".a-color-base") || soldEl?.querySelector("a") || soldEl;
+            const soldBy = soldValEl && soldValEl.textContent ? soldValEl.textContent.replace(/\s+/g, " ").trim() : "";
+
+            if (price !== null || condition) {
+              extracted.push({ price, condition, shipsFrom, soldBy });
+            }
+          }
+
+          // B. Other Offers
+          const offerRows = document.querySelectorAll("#aod-offer-list #aod-offer, #aod-offer-list div[role='listitem'], .aod-offer");
+          for (const row of Array.from(offerRows)) {
+            let price: number | null = null;
+            const priceSelectors = [
+              ".a-price",
+              ".a-price .a-offscreen",
+              ".a-color-price",
+              ".a-price-whole"
+            ];
+            for (const selector of priceSelectors) {
+              const priceEl = row.querySelector(selector);
+              if (priceEl) {
+                const text = priceEl.textContent || "";
+                const match = text.replace(/[^0-9.]/g, "");
+                if (match) {
+                  const val = parseFloat(match);
+                  if (!isNaN(val) && val > 0) {
+                    price = val;
+                    break;
+                  }
+                }
+              }
+            }
+
+            const condEl = row.querySelector("[id$='-heading']") || 
+                           row.querySelector(".aod-offer-heading") ||
+                           row.querySelector(".aod-heading");
+            const condition = condEl && condEl.textContent ? condEl.textContent.replace(/\s+/g, " ").trim() : "";
+
+            const shipsEl = row.querySelector("[id$='-shipsFrom']") || 
+                            row.querySelector(".aod-shipfrom") ||
+                            row.querySelector("[id*='shipsFrom']");
+            const shipsValEl = shipsEl?.querySelector(".a-color-base") || shipsEl;
+            const shipsFrom = shipsValEl && shipsValEl.textContent ? shipsValEl.textContent.replace(/\s+/g, " ").trim() : "";
+
+            const soldEl = row.querySelector("[id$='-soldBy']") || 
+                           row.querySelector(".aod-soldby") ||
+                           row.querySelector("[id*='soldBy']");
+            const soldValEl = soldEl?.querySelector(".a-color-base") || soldEl?.querySelector("a") || soldEl;
+            const soldBy = soldValEl && soldValEl.textContent ? soldValEl.textContent.replace(/\s+/g, " ").trim() : "";
+
+            if (price !== null || condition) {
+              extracted.push({ price, condition, shipsFrom, soldBy });
+            }
+          }
+
+          return extracted;
+        });
+
+        if (offers.length > 0) {
+          logger.info(`Scraped ${offers.length} offers from buying choices side modal:`);
+          offers.forEach((opt, idx) => {
+            logger.info(`  [Option ${idx + 1}]: Price: ${opt.price ? `A$${opt.price}` : "N/A"}, Condition: "${opt.condition}", Ships From: "${opt.shipsFrom}", Sold By: "${opt.soldBy}"`);
+          });
+
+          // Select the lowest price among valid options
+          const validOffers = offers.filter(o => o.price !== null && o.price > 0);
+          if (validOffers.length > 0) {
+            validOffers.sort((a, b) => (a.price as number) - (b.price as number));
+            price = validOffers[0].price;
+            logger.info(`Selected lowest price from buying options: A$${price}`);
+          }
+        } else {
+          logger.warn("No offers found inside the Buying Choices sidebar.");
+        }
+      } catch (err) {
+        logger.error(`Error while interacting with Buying Options modal: ${(err as Error).message}`);
+      }
+    }
+
+    return { price, cleanUrl };
   }
 }

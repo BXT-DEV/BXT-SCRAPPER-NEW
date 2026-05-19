@@ -1,14 +1,3 @@
-2026/05/13-15:55:37.905 285d9e Reusing MANIFEST /Volumes/BISMILLAH/PROJECTS/BXT-SCRAPPER-NEW/chrome-data/Default/Local Storage/leveldb/MANIFEST-000001
-2026/05/13-15:55:37.908 285d9e Recovering log #15
-2026/05/13-15:55:37.909 285d9e Level-0 table #18: started
-2026/05/13-15:55:37.921 285d9e Level-0 table #18: 23313 bytes OK
-2026/05/13-15:55:37.932 285d9e Delete type=0 #15
-2026/05/13-15:55:37.934 285da1 Compacting 4@0 + 1@1 files
-2026/05/13-15:55:37.948 285da1 Generated table #20@0: 43 keys, 244658 bytes
-2026/05/13-15:55:37.948 285da1 Compacted 4@0 + 1@1 files => 244658 bytes
-2026/05/13-15:55:37.959 285da1 compacted to: files[ 0 1 1 0 0 0 0 ]
-2026/05/13-15:55:37.960 285da1 Delete type=2 #16
-2026/05/13-15:55:37.960 285da1 Delete type=2 #7
-2026/05/13-15:55:37.960 285da1 Delete type=2 #13
-2026/05/13-15:55:37.960 285da1 Delete type=2 #9
-2026/05/13-15:55:37.960 285da1 Delete type=2 #18
+2026/05/19-13:05:19.288 7b359 Reusing MANIFEST /Volumes/BISMILLAH/PROJECTS/BXT-SCRAPPER-NEW/chrome-data/Default/Local Storage/leveldb/MANIFEST-000001
+2026/05/19-13:05:19.290 7b359 Recovering log #33
+2026/05/19-13:05:19.290 7b359 Reusing old log /Volumes/BISMILLAH/PROJECTS/BXT-SCRAPPER-NEW/chrome-data/Default/Local Storage/leveldb/000033.log 
