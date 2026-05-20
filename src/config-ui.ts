@@ -6,6 +6,7 @@ import { exec, spawn } from 'node:child_process';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { getScraperStatus } from './utils/status-manager.js';
+import { loadRules, saveRules } from './utils/rules-manager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -132,6 +133,26 @@ async function handleGetEnv(res: http.ServerResponse) {
   jsonResponse(res, { current, example });
 }
 
+async function handleGetRules(res: http.ServerResponse) {
+  try {
+    const rules = loadRules();
+    jsonResponse(res, rules);
+  } catch (e) {
+    jsonResponse(res, { error: (e as Error).message }, 500);
+  }
+}
+
+async function handlePostRules(req: http.IncomingMessage, res: http.ServerResponse) {
+  try {
+    const body = await readBody(req);
+    const data = JSON.parse(body.toString());
+    const success = saveRules(data);
+    jsonResponse(res, { success });
+  } catch (e) {
+    jsonResponse(res, { success: false, error: (e as Error).message }, 500);
+  }
+}
+
 async function handlePostEnv(req: http.IncomingMessage, res: http.ServerResponse) {
   const body = await readBody(req);
   const data = JSON.parse(body.toString());
@@ -213,6 +234,8 @@ const server = http.createServer(async (req, res) => {
     if (method === 'GET' && url === '/') return await handleServeHtml(res);
     if (method === 'GET' && url === '/api/env') return await handleGetEnv(res);
     if (method === 'POST' && url === '/api/env') return await handlePostEnv(req, res);
+    if (method === 'GET' && url === '/api/rules') return await handleGetRules(res);
+    if (method === 'POST' && url === '/api/rules') return await handlePostRules(req, res);
     if (method === 'POST' && url === '/api/upload-csv') return await handleUploadCsv(req, res);
     if (method === 'GET' && url === '/api/output-files') return await handleGetOutputFiles(res);
 

@@ -8,6 +8,7 @@ import type { AmazonSearchResult, BecexProduct } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { randomDelay } from "../utils/delay.js";
 import { extractSpecs } from "../utils/product-utils.js";
+import { loadRules } from "../utils/rules-manager.js";
 
 export class ReebeloSearchService {
   private readonly domain: string;
@@ -110,15 +111,22 @@ export class ReebeloSearchService {
     logger.info(`Selecting Reebelo variants for: ${product.productName}`);
     await randomDelay(2000, 3000);
 
+    const rulesConfig = loadRules();
+    const catRules = rulesConfig["MAPPING REFURBISHED"];
+    const pristineSuffix = catRules?.skuMappings?.Pristine || "-VR-ASN-AU";
+    const excellentSuffix = catRules?.skuMappings?.Excellent || "-RD-VR-EXD-AU";
+
     const specs = extractSpecs(product.productName);
-    const isPristine = product.sku.endsWith("-VR-ASN-AU");
-    const isExcellent = product.sku.endsWith("-RD-VR-EXD-AU");
+    const isPristine = product.sku.endsWith(pristineSuffix);
+    const isExcellent = product.sku.endsWith(excellentSuffix);
+
+    const storeRules = catRules?.stores?.reebelo;
 
     // 1. Condition selection
-    if (isPristine) {
-      await this.clickVariantByText(page, ["Premium", "Pristine"]);
-    } else if (isExcellent) {
-      await this.clickVariantByText(page, ["Excellent"]);
+    if (isPristine && storeRules?.conditionMapping?.Pristine) {
+      await this.clickVariantByText(page, storeRules.conditionMapping.Pristine);
+    } else if (isExcellent && storeRules?.conditionMapping?.Excellent) {
+      await this.clickVariantByText(page, storeRules.conditionMapping.Excellent);
     }
 
     // 2. Storage selection
@@ -136,35 +144,39 @@ export class ReebeloSearchService {
       await this.clickVariantByText(page, specs.connectivity);
     }
 
-    // 5. Battery selection (Strict: Standard only)
-    const batterySuccess = await this.clickVariantByText(page, ["Standard Battery", "Standard"]);
-    if (!batterySuccess) {
-      const hasOtherBatteryOptions = await page.evaluate(() => {
-        const buttons = Array.from(document.querySelectorAll('button, div[role="button"], label, span'));
-        return buttons.some(btn => {
-          const txt = btn.textContent?.toLowerCase() || '';
-          return (txt.includes('elevated') || txt.includes('new battery')) && txt.length < 30;
+    // 5. Battery selection
+    if (storeRules?.batteryPolicy === "Standard Only") {
+      const batterySuccess = await this.clickVariantByText(page, ["Standard Battery", "Standard"]);
+      if (!batterySuccess) {
+        const hasOtherBatteryOptions = await page.evaluate(() => {
+          const buttons = Array.from(document.querySelectorAll('button, div[role="button"], label, span'));
+          return buttons.some(btn => {
+            const txt = btn.textContent?.toLowerCase() || '';
+            return (txt.includes('elevated') || txt.includes('new battery')) && txt.length < 30;
+          });
         });
-      });
-      if (hasOtherBatteryOptions) {
-        throw new Error("REQUIRED_VARIANT_NOT_FOUND: Standard Battery (Only Elevated or New Battery option is available)");
+        if (hasOtherBatteryOptions) {
+          throw new Error("REQUIRED_VARIANT_NOT_FOUND: Standard Battery (Only Elevated or New Battery option is available)");
+        }
       }
     }
 
-    // 6. SIM selection (Strict: Physical only)
-    const simSuccess = await this.clickVariantByText(page, ["Physical SIM", "Dual SIM", "Nano-SIM", "Single SIM"]);
-    if (!simSuccess) {
-      const hasEsimOption = await page.evaluate(() => {
-        const buttons = Array.from(document.querySelectorAll('button, div[role="button"], label, span'));
-        const title = document.querySelector('h1')?.innerText || '';
-        if (title.toLowerCase().includes('esim')) return true;
-        return buttons.some(btn => {
-          const txt = btn.textContent?.toLowerCase() || '';
-          return txt.includes('esim') && txt.length < 30;
+    // 6. SIM selection
+    if (storeRules?.simPolicy === "Physical Only") {
+      const simSuccess = await this.clickVariantByText(page, ["Physical SIM", "Dual SIM", "Nano-SIM", "Single SIM"]);
+      if (!simSuccess) {
+        const hasEsimOption = await page.evaluate(() => {
+          const buttons = Array.from(document.querySelectorAll('button, div[role="button"], label, span'));
+          const title = document.querySelector('h1')?.innerText || '';
+          if (title.toLowerCase().includes('esim')) return true;
+          return buttons.some(btn => {
+            const txt = btn.textContent?.toLowerCase() || '';
+            return txt.includes('esim') && txt.length < 30;
+          });
         });
-      });
-      if (hasEsimOption) {
-        throw new Error("REQUIRED_VARIANT_NOT_FOUND: Physical SIM (Only eSIM option is available)");
+        if (hasEsimOption) {
+          throw new Error("REQUIRED_VARIANT_NOT_FOUND: Physical SIM (Only eSIM option is available)");
+        }
       }
     }
 

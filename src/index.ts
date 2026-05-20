@@ -35,6 +35,7 @@ import { getBroadSearchQuery } from "./utils/product-utils.js";
 import type { BecexProduct, ScrapedResult, AmazonSearchResult } from "./types/index.js";
 import fs from "fs";
 import type { Page } from "playwright";
+import { loadRules } from "./utils/rules-manager.js";
 import { promisify } from "util";
 
 const sleep = promisify(setTimeout);
@@ -186,10 +187,27 @@ async function processSingleProduct(
   matcherService: GeminiMatcherService,
   page: Page
 ): Promise<ScrapedResult> {
-  // Pre-filter: Do NOT map Pristine or Very Good items to Amazon
-  if (config.scraperTarget === "amazon" && (product.sku.endsWith("-VR-ASN-AU") || product.sku.endsWith("-VGC-AU"))) {
-    logger.info(`Skipping ${product.sku.endsWith("-VGC-AU") ? "Very Good" : "Pristine"} item for Amazon mapping (per rules).`);
-    return buildNoMatchResult(product);
+  // Pre-filter using rules.json
+  const rulesConfig = loadRules();
+  const catRules = rulesConfig[config.mappingCategory];
+  if (catRules) {
+    const storeRules = catRules.stores[config.scraperTarget];
+    if (storeRules) {
+      if (storeRules.excludePristine) {
+        const pristineSuffix = catRules.skuMappings?.Pristine || "-VR-ASN-AU";
+        if (product.sku.endsWith(pristineSuffix)) {
+          logger.info(`Skipping Pristine item (${product.sku}) for ${config.scraperTarget} mapping (per rules).`);
+          return buildNoMatchResult(product);
+        }
+      }
+      if (storeRules.excludeVeryGood) {
+        const vgSuffix = catRules.skuMappings?.["Very Good"] || "-VGC-AU";
+        if (product.sku.endsWith(vgSuffix)) {
+          logger.info(`Skipping Very Good item (${product.sku}) for ${config.scraperTarget} mapping (per rules).`);
+          return buildNoMatchResult(product);
+        }
+      }
+    }
   }
 
   // Step 1: Human-like Search

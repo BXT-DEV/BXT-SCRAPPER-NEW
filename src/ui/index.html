@@ -166,6 +166,154 @@
         .modal-title { font-size: 1.5rem; font-weight: 700; color: #fbbf24; display: flex; align-items: center; gap: 0.75rem; }
         .modal-body { margin-bottom: 2rem; color: var(--text-muted); line-height: 1.6; }
         .modal-actions { display: flex; gap: 1rem; }
+
+        /* Tabs Navigation */
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.75rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .tab-btn.active {
+            color: var(--accent);
+            background: rgba(59, 130, 246, 0.1);
+        }
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -0.5rem;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Rules Editor Styles */
+        .rules-category-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--purple);
+            margin: 1.5rem 0 1rem 0;
+            border-bottom: 1px dashed rgba(139, 92, 246, 0.3);
+            padding-bottom: 0.5rem;
+        }
+        .rules-section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 0.75rem;
+        }
+        .rules-store-block {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .rules-grid-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .rules-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .rules-switch-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 0.75rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s ease;
+        }
+        .rules-switch-row:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+        .rules-switch-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #cbd5e1;
+        }
+        /* Custom gorgeous switches */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #334155;
+            transition: .3s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--accent);
+        }
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+        .rules-store-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #60a5fa;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -174,6 +322,13 @@
             <h1>Configuration</h1>
             <p>Set up your environment variables easily</p>
         </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" id="config-tab-btn" onclick="switchTab('config-tab')">⚙️ Configuration</button>
+            <button class="tab-btn" id="rules-tab-btn" onclick="switchTab('rules-tab')">📊 Mapping Rules</button>
+        </div>
+
+        <div id="config-tab" class="tab-content active">
 
         <!-- Input CSV Upload Card -->
         <div class="card">
@@ -229,7 +384,32 @@
                 <div class="empty-state">Loading output files...</div>
             </div>
         </div>
-    </div>
+        </div> <!-- End of config-tab -->
+
+        <!-- Rules Tab -->
+        <div id="rules-tab" class="tab-content">
+            <div class="card">
+                <div class="card-title"><span class="icon">📊</span> Mapping Rules Editor</div>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                    Modify scraper condition matching logic, SKU endings, battery policies, and SIM type enforcements visually. These rules will be auto-saved and used during scraping.
+                </p>
+                <form id="rulesForm">
+                    <div id="rulesFields">
+                        <div style="text-align: center; padding: 2rem; color: #94a3b8;">
+                            <div class="spinner" style="display: inline-block; border-top-color: #8b5cf6;"></div>
+                            <p style="margin-top: 1rem;">Loading rules configuration...</p>
+                        </div>
+                    </div>
+                    <div class="actions" style="margin-top: 2rem;">
+                        <button type="submit" class="btn btn-primary" id="saveRulesBtn" style="background: var(--purple); box-shadow: 0 4px 14px 0 var(--purple-glow);">
+                            <div class="spinner"></div>
+                            <span>Save Rules Configuration</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div> <!-- End of container -->
 
     <!-- API Key Exhausted Modal -->
     <div class="modal-overlay" id="pauseModal">
@@ -650,6 +830,253 @@
             container.innerHTML = '<div class="empty-state">Failed to load output files.</div>';
         }
     }
+
+    // === Tabs switcher ===
+    window.switchTab = function(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        
+        document.getElementById(tabId).classList.add('active');
+        document.getElementById(tabId + '-btn').classList.add('active');
+
+        if (tabId === 'rules-tab') {
+            loadRules();
+        }
+    };
+
+    // === Rules Config Logic ===
+    let rulesData = null;
+
+    async function loadRules() {
+        try {
+            const res = await fetch("/api/rules");
+            rulesData = await res.json();
+            renderRules(rulesData);
+        } catch (e) {
+            document.getElementById("rulesFields").innerHTML = '<p style="color: #ef4444;">Error loading rules: ' + e.message + '</p>';
+        }
+    }
+
+    function renderRules(rules) {
+        const container = document.getElementById("rulesFields");
+        container.innerHTML = "";
+
+        for (const [category, config] of Object.entries(rules)) {
+            const catDiv = document.createElement("div");
+            
+            const catTitle = document.createElement("div");
+            catTitle.className = "rules-category-title";
+            catTitle.textContent = category;
+            catDiv.appendChild(catTitle);
+
+            // Sku Mappings section (if present)
+            if (config.skuMappings) {
+                const skuBlock = document.createElement("div");
+                skuBlock.className = "rules-store-block";
+                skuBlock.innerHTML = '<div class="rules-store-title">🔑 SKU Suffix Mappings</div>';
+                
+                const grid = document.createElement("div");
+                grid.className = "rules-grid-row";
+                
+                for (const [cond, suffix] of Object.entries(config.skuMappings)) {
+                    const group = document.createElement("div");
+                    group.className = "rules-input-group";
+                    group.innerHTML = `<label style="font-size:0.85rem; color:var(--text-muted); margin-bottom: 0.25rem;">${cond} Condition Suffix</label>
+                        <input type="text" data-cat="${category}" data-type="sku" data-key="${cond}" value="${suffix}" style="padding:0.75rem; background:var(--input-bg); border:1px solid var(--border-color); border-radius:0.5rem; color:white;">`;
+                    grid.appendChild(group);
+                }
+                skuBlock.appendChild(grid);
+                catDiv.appendChild(skuBlock);
+            }
+
+            // Stores section
+            if (config.stores) {
+                for (const [store, storeConfig] of Object.entries(config.stores)) {
+                    const storeBlock = document.createElement("div");
+                    storeBlock.className = "rules-store-block";
+                    
+                    const storeEmoji = store === "amazon" ? "📦" : store === "reebelo" ? "🦘" : store === "backmarket" ? "🍏" : "🏪";
+                    storeBlock.innerHTML = `<div class="rules-store-title">${storeEmoji} ${store.toUpperCase()} Rules</div>`;
+
+                    // Condition mappings for the store
+                    if (storeConfig.conditionMapping) {
+                        const condTitle = document.createElement("div");
+                        condTitle.className = "rules-section-title";
+                        condTitle.textContent = "Condition Matching";
+                        storeBlock.appendChild(condTitle);
+
+                        const grid = document.createElement("div");
+                        grid.className = "rules-grid-row";
+
+                        for (const [ourCond, targetConds] of Object.entries(storeConfig.conditionMapping)) {
+                            const group = document.createElement("div");
+                            group.className = "rules-input-group";
+                            group.innerHTML = `<label style="font-size:0.85rem; color:var(--text-muted); margin-bottom: 0.25rem;">${ourCond} maps to</label>
+                                <input type="text" data-cat="${category}" data-store="${store}" data-type="cond" data-key="${ourCond}" value="${targetConds.join(', ')}" placeholder="e.g. Excellent, Premium" style="padding:0.75rem; background:var(--input-bg); border:1px solid var(--border-color); border-radius:0.5rem; color:white;">`;
+                            grid.appendChild(group);
+                        }
+                        storeBlock.appendChild(grid);
+                    }
+
+                    // Switches & inputs for policy flags
+                    const policiesTitle = document.createElement("div");
+                    policiesTitle.className = "rules-section-title";
+                    policiesTitle.textContent = "Policies & Filters";
+                    storeBlock.appendChild(policiesTitle);
+
+                    const policyContainer = document.createElement("div");
+                    
+                    // Battery Policy
+                    if (storeConfig.batteryPolicy !== undefined) {
+                        const row = document.createElement("div");
+                        row.className = "rules-switch-row";
+                        row.innerHTML = `<span class="rules-switch-label">Battery Selection Policy</span>
+                            <select data-cat="${category}" data-store="${store}" data-type="policy" data-key="batteryPolicy" style="padding:0.5rem; background:var(--bg-color); border:1px solid var(--border-color); border-radius:0.5rem; color:white;">
+                                <option value="Standard Only" ${storeConfig.batteryPolicy === 'Standard Only' ? 'selected' : ''}>Standard Only</option>
+                                <option value="Allow All" ${storeConfig.batteryPolicy === 'Allow All' ? 'selected' : ''}>Allow All</option>
+                            </select>`;
+                        policyContainer.appendChild(row);
+                    }
+
+                    // SIM Policy
+                    if (storeConfig.simPolicy !== undefined) {
+                        const row = document.createElement("div");
+                        row.className = "rules-switch-row";
+                        row.innerHTML = `<span class="rules-switch-label">SIM Selection Policy</span>
+                            <select data-cat="${category}" data-store="${store}" data-type="policy" data-key="simPolicy" style="padding:0.5rem; background:var(--bg-color); border:1px solid var(--border-color); border-radius:0.5rem; color:white;">
+                                <option value="Physical Only" ${storeConfig.simPolicy === 'Physical Only' ? 'selected' : ''}>Physical Only</option>
+                                <option value="Allow All" ${storeConfig.simPolicy === 'Allow All' ? 'selected' : ''}>Allow All</option>
+                            </select>`;
+                        policyContainer.appendChild(row);
+                    }
+
+                    // Exclusions / Switches
+                    const switchKeys = [
+                        { key: "excludePristine", label: "Exclude Pristine SKU from scraping" },
+                        { key: "excludeVeryGood", label: "Exclude Very Good SKU from scraping" },
+                        { key: "rejectBonusAccessories", label: "Reject listings with bonus accessories" },
+                        { key: "rejectAustralianVersion", label: "Reject 'Australian version' / 'AU Stock' listings" },
+                        { key: "rejectPreOrder", label: "Reject pre-order listings" },
+                        { key: "rejectConditionLabels", label: "Reject Renewed/Refurbished/Used labels (Must be Brand New)" }
+                    ];
+
+                    switchKeys.forEach(({ key, label }) => {
+                        if (storeConfig[key] !== undefined) {
+                            const row = document.createElement("div");
+                            row.className = "rules-switch-row";
+                            row.innerHTML = `<span class="rules-switch-label">${label}</span>
+                                <label class="switch">
+                                    <input type="checkbox" data-cat="${category}" data-store="${store}" data-type="switch" data-key="${key}" ${storeConfig[key] ? 'checked' : ''}>
+                                    <span class="slider"></span>
+                                </label>`;
+                            policyContainer.appendChild(row);
+                        }
+                    });
+
+                    // Number Inputs (maxWarrantyMonths or maxWarrantyYears)
+                    if (storeConfig.maxWarrantyMonths !== undefined) {
+                        const row = document.createElement("div");
+                        row.className = "rules-switch-row";
+                        row.innerHTML = `<span class="rules-switch-label">Max Allowed Warranty (Months)</span>
+                            <input type="number" data-cat="${category}" data-store="${store}" data-type="number" data-key="maxWarrantyMonths" value="${storeConfig.maxWarrantyMonths}" style="width:70px; padding:0.5rem; background:var(--bg-color); border:1px solid var(--border-color); border-radius:0.5rem; color:white; text-align:center;">`;
+                        policyContainer.appendChild(row);
+                    }
+                    if (storeConfig.maxWarrantyYears !== undefined) {
+                        const row = document.createElement("div");
+                        row.className = "rules-switch-row";
+                        row.innerHTML = `<span class="rules-switch-label">Max Allowed Warranty (Years)</span>
+                            <input type="number" data-cat="${category}" data-store="${store}" data-type="number" data-key="maxWarrantyYears" value="${storeConfig.maxWarrantyYears}" style="width:70px; padding:0.5rem; background:var(--bg-color); border:1px solid var(--border-color); border-radius:0.5rem; color:white; text-align:center;">`;
+                        policyContainer.appendChild(row);
+                    }
+
+                    storeBlock.appendChild(policyContainer);
+                    catDiv.appendChild(storeBlock);
+                }
+            }
+
+            container.appendChild(catDiv);
+        }
+
+        // Add change listeners to auto-save rules
+        const allInputs = container.querySelectorAll("input, select");
+        allInputs.forEach(input => {
+            input.addEventListener("input", () => {
+                clearTimeout(window.saveRulesTimeout);
+                window.saveRulesTimeout = setTimeout(() => {
+                    saveRulesFromUI();
+                }, 1000);
+            });
+        });
+    }
+
+    async function saveRulesFromUI() {
+        if (!rulesData) return;
+        const btn = document.getElementById("saveRulesBtn");
+        const status = document.getElementById("statusMessage");
+        if (btn) {
+            btn.classList.add("loading");
+            btn.querySelector("span").textContent = "Saving Rules...";
+        }
+        status.className = "status-running";
+        status.textContent = "Saving Rules...";
+
+        const container = document.getElementById("rulesFields");
+        const inputs = container.querySelectorAll("input, select");
+        
+        inputs.forEach(input => {
+            const cat = input.getAttribute("data-cat");
+            const store = input.getAttribute("data-store");
+            const type = input.getAttribute("data-type");
+            const key = input.getAttribute("data-key");
+
+            if (!cat || !key) return;
+
+            if (type === "sku") {
+                rulesData[cat].skuMappings[key] = input.value.trim();
+            } else if (type === "cond") {
+                const vals = input.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                rulesData[cat].stores[store].conditionMapping[key] = vals;
+            } else if (type === "policy") {
+                rulesData[cat].stores[store][key] = input.value;
+            } else if (type === "switch") {
+                rulesData[cat].stores[store][key] = input.checked;
+            } else if (type === "number") {
+                rulesData[cat].stores[store][key] = parseInt(input.value) || 0;
+            }
+        });
+
+        try {
+            const response = await fetch("/api/rules", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(rulesData)
+            });
+            if (response.ok) {
+                status.textContent = "Rules saved successfully!";
+                status.className = "status-success";
+                setTimeout(() => {
+                    if (status.textContent === "Rules saved successfully!") {
+                        status.className = "";
+                    }
+                }, 3000);
+            } else {
+                throw new Error("Failed to save rules");
+            }
+        } catch (error) {
+            status.textContent = error.message;
+            status.className = "status-error";
+        } finally {
+            if (btn) {
+                btn.classList.remove("loading");
+                btn.querySelector("span").textContent = "Save Rules Configuration";
+            }
+        }
+    }
+
+    document.getElementById("rulesForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        await saveRulesFromUI();
+    });
 </script>
 </body>
 </html>

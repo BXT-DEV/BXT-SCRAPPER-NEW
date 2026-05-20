@@ -9,6 +9,7 @@ import { logger } from "../utils/logger.js";
 import { randomDelay } from "../utils/delay.js";
 import { extractSpecs } from "../utils/product-utils.js";
 import { humanType, humanClick, moveMouseRandomly, getModifierKey } from "../utils/human-interaction.js";
+import { loadRules } from "../utils/rules-manager.js";
 import fs from "fs";
 import path from "path";
 
@@ -207,15 +208,22 @@ export class BackmarketSearchService {
     logger.info(`Selecting Backmarket variants for: ${product.productName}`);
     await randomDelay(2000, 3000);
 
+    const rulesConfig = loadRules();
+    const catRules = rulesConfig["MAPPING REFURBISHED"];
+    const pristineSuffix = catRules?.skuMappings?.Pristine || "-VR-ASN-AU";
+    const excellentSuffix = catRules?.skuMappings?.Excellent || "-RD-VR-EXD-AU";
+
     const specs = extractSpecs(product.productName);
-    const isPristine = product.sku.endsWith("-VR-ASN-AU") || product.productName.toLowerCase().includes("pristine");
-    const isExcellent = product.sku.includes("EXD-AU") || product.productName.toLowerCase().includes("excellent");
+    const isPristine = product.sku.endsWith(pristineSuffix) || product.productName.toLowerCase().includes("pristine");
+    const isExcellent = product.sku.includes(excellentSuffix) || product.sku.includes("EXD-AU") || product.productName.toLowerCase().includes("excellent");
+
+    const storeRules = catRules?.stores?.backmarket;
 
     // 1. Condition selection
-    if (isPristine) {
-      await this.clickVariantByText(page, ["Excellent"]);
-    } else if (isExcellent) {
-      await this.clickVariantByText(page, ["Good"]);
+    if (isPristine && storeRules?.conditionMapping?.Pristine) {
+      await this.clickVariantByText(page, storeRules.conditionMapping.Pristine);
+    } else if (isExcellent && storeRules?.conditionMapping?.Excellent) {
+      await this.clickVariantByText(page, storeRules.conditionMapping.Excellent);
     }
 
     // 2. Storage selection
@@ -233,16 +241,18 @@ export class BackmarketSearchService {
       await this.clickVariantByText(page, specs.connectivity);
     }
 
-    // 5. SIM rules (Strict: Physical only)
-    const simSuccess = await this.clickVariantByText(page, ["Physical SIM", "Dual SIM", "Nano-SIM"]);
-    if (!simSuccess) {
-       const isEsimOnly = await page.evaluate(() => {
-         const title = document.querySelector('h1')?.innerText || '';
-         return title.toLowerCase().includes('esim');
-       });
-       if (isEsimOnly) {
-         throw new Error("REQUIRED_VARIANT_NOT_FOUND: Physical SIM (Listing title indicates eSIM only)");
-       }
+    // 5. SIM rules
+    if (storeRules?.simPolicy === "Physical Only") {
+      const simSuccess = await this.clickVariantByText(page, ["Physical SIM", "Dual SIM", "Nano-SIM"]);
+      if (!simSuccess) {
+         const isEsimOnly = await page.evaluate(() => {
+           const title = document.querySelector('h1')?.innerText || '';
+           return title.toLowerCase().includes('esim');
+         });
+         if (isEsimOnly) {
+           throw new Error("REQUIRED_VARIANT_NOT_FOUND: Physical SIM (Listing title indicates eSIM only)");
+         }
+      }
     }
 
     await randomDelay(1000, 2000);

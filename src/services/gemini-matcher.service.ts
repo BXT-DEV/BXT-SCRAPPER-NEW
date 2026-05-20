@@ -7,43 +7,68 @@
 import { GoogleGenAI } from "@google/genai";
 import type { BecexProduct, AmazonSearchResult, GeminiMatchResult, ScraperTarget, MappingCategory } from "../types/index.js";
 import { logger } from "../utils/logger.js";
+import { loadRules } from "../utils/rules-manager.js";
 
-// ── Store-specific rules (from mapping document) ───────────
+// ── Store-specific rules (from rules.json) ───────────
 function buildStoreRules(scraperTarget: ScraperTarget, mappingCategory: MappingCategory): string {
   const rules: string[] = [];
+  const rulesConfig = loadRules();
+  const catRules = rulesConfig[mappingCategory];
 
-  // ── REFURBISHED ──────────────────────────────────────────
-  if (mappingCategory === "MAPPING REFURBISHED") {
-    rules.push("REFURBISHED MAPPING — You are matching refurbished/renewed products.");
-    rules.push("Source SKU ending in '-VR-ASN-AU' = Pristine condition.");
-    rules.push("Source SKU ending in '-RD-VR-EXD-AU' = Excellent condition.");
-    rules.push("Source SKU ending in '-VGC-AU' = Very Good condition.");
-
-    if (scraperTarget === "reebelo") {
-      rules.push("STORE: Reebelo (reebelo.com.au)");
-      rules.push("- Pristine (our) → Premium (Reebelo). Excellent (our) → Excellent (Reebelo).");
-      rules.push("- Battery: ONLY 'Standard Battery'. REJECT if only 'Elevated' or 'New Battery' available.");
-      rules.push("- SIM: ONLY listings with Physical SIM. REJECT if only eSIM available.");
-    } else if (scraperTarget === "backmarket") {
-      rules.push("STORE: Backmarket (backmarket.com.au)");
-      rules.push("- Pristine (our) → Excellent (Backmarket). Excellent (our) → Good (Backmarket).");
-      rules.push("- SIM: ONLY listings with Physical SIM. REJECT if only eSIM available.");
-    } else if (scraperTarget === "amazon") {
-      rules.push("STORE: Amazon (amazon.com.au) — REFURBISHED rules");
-      rules.push("- DO NOT map Pristine items to Amazon AT ALL. If SKU ends in '-VR-ASN-AU', set isMatch=false.");
-      rules.push("- DO NOT map Very Good items to Amazon AT ALL. If SKU ends in '-VGC-AU', set isMatch=false.");
-      rules.push("- Excellent (our) → ONLY match 'Excellent' or 'Renewed' condition. Renewed = Excellent.");
-      rules.push("- REJECT listings that mention: bonus accessories (case, screen protector, earphones, brick, etc.)");
-      rules.push("- REJECT listings with warranty > 6 months.");
-      rules.push("- REJECT listings that say 'Australian version', 'AU Stock', or similar.");
-      rules.push("- REJECT pre-order listings.");
-    }
+  if (!catRules) {
+    return "";
   }
 
-  // ── BRAND NEW ────────────────────────────────────────────
-  if (mappingCategory === "MAPPING BRAND NEW") {
-    rules.push("BRAND NEW MAPPING — You are matching brand new (sealed) products.");
+  if (mappingCategory === "MAPPING REFURBISHED") {
+    rules.push("REFURBISHED MAPPING — You are matching refurbished/renewed products.");
+    if (catRules.skuMappings) {
+      for (const [cond, suffix] of Object.entries(catRules.skuMappings)) {
+        rules.push(`Source SKU ending in '${suffix}' = ${cond} condition.`);
+      }
+    }
 
+    const storeRules = catRules.stores[scraperTarget];
+    if (storeRules) {
+      rules.push(`STORE: ${scraperTarget}`);
+      if (storeRules.conditionMapping) {
+        for (const [ourCond, targetConds] of Object.entries(storeRules.conditionMapping)) {
+          if (Array.isArray(targetConds)) {
+            rules.push(`- ${ourCond} (our) → ${targetConds.join(" or ")} (${scraperTarget}).`);
+          }
+        }
+      }
+      if (storeRules.batteryPolicy) {
+        rules.push(`- Battery: ONLY matches conforming to '${storeRules.batteryPolicy}' battery rules.`);
+      }
+      if (storeRules.simPolicy) {
+        rules.push(`- SIM: ONLY matches conforming to '${storeRules.simPolicy}' SIM rules.`);
+      }
+      if (storeRules.excludePristine) {
+        const pristineSuffix = catRules.skuMappings?.Pristine || "-VR-ASN-AU";
+        rules.push(`- DO NOT map Pristine items to ${scraperTarget} AT ALL. If SKU ends in '${pristineSuffix}', set isMatch=false.`);
+      }
+      if (storeRules.excludeVeryGood) {
+        const vgSuffix = catRules.skuMappings?.["Very Good"] || "-VGC-AU";
+        rules.push(`- DO NOT map Very Good items to ${scraperTarget} AT ALL. If SKU ends in '${vgSuffix}', set isMatch=false.`);
+      }
+      if (storeRules.rejectBonusAccessories) {
+        rules.push("- REJECT listings that mention: bonus accessories (case, screen protector, earphones, brick, etc.)");
+      }
+      if (storeRules.maxWarrantyMonths) {
+        rules.push(`- REJECT listings with warranty > ${storeRules.maxWarrantyMonths} months.`);
+      }
+      if (storeRules.rejectAustralianVersion) {
+        rules.push("- REJECT listings that say 'Australian version', 'AU Stock', or similar.");
+      }
+      if (storeRules.rejectPreOrder) {
+        rules.push("- REJECT pre-order listings.");
+      }
+    }
+  } else {
+    // Brand New categories
+    rules.push(`${mappingCategory} MAPPING — You are matching brand new (sealed) products.`);
+    
+    // Default store specific instructions
     if (scraperTarget === "jbhifi") {
       rules.push("STORE: JB Hi-Fi (jbhifi.com.au)");
       rules.push("- Products may be nested (with variant picker for connectivity/storage/color) or single.");
@@ -64,22 +89,6 @@ function buildStoreRules(scraperTarget: ScraperTarget, mappingCategory: MappingC
     } else if (scraperTarget === "bestmobilephone") {
       rules.push("STORE: BestMobilePhone (bestmobilephone.com.au)");
       rules.push("- Same as Spectronic: single products only, no nested.");
-    } else if (scraperTarget === "amazon") {
-      rules.push("STORE: Amazon (amazon.com.au) — BRAND NEW rules");
-      rules.push("- REJECT listings with bonus accessories (case, screen protector, earphones, etc.).");
-      rules.push("- REJECT listings with warranty > 1 year.");
-      rules.push("- REJECT 'Australian version', 'AU Stock' listings.");
-      rules.push("- REJECT pre-order listings.");
-      rules.push("- REJECT listings with ANY condition label (Renewed, Refurbished, Used, etc.). Must be brand new.");
-    }
-  }
-
-  // ── BRAND NEW LAPTOP ─────────────────────────────────────
-  if (mappingCategory === "MAPPING BRAND NEW Laptop") {
-    rules.push("BRAND NEW LAPTOP MAPPING — Laptops are harder to match. Same name/image may differ by release year and chipset.");
-
-    if (scraperTarget === "jbhifi") {
-      rules.push("STORE: JB Hi-Fi — Same rules as Brand New.");
     } else if (scraperTarget === "scorptec") {
       rules.push("STORE: Scorptec (scorptec.com.au)");
       rules.push("- Search bar shows inline results immediately.");
@@ -88,24 +97,6 @@ function buildStoreRules(scraperTarget: ScraperTarget, mappingCategory: MappingC
       rules.push("STORE: Centrecom (centrecom.com.au)");
       rules.push("- No nested products, but title format differs from other stores.");
       rules.push("- Verify by model number if available.");
-      rules.push("- NOTE: This store has CAPTCHA protection.");
-    } else if (scraperTarget === "amazon") {
-      rules.push("STORE: Amazon (amazon.com.au) — BRAND NEW LAPTOP rules");
-      rules.push("- Same rejection rules as Brand New: no bonus accessories, no AU version, no pre-order, warranty ≤ 1 year.");
-      rules.push("- REJECT any listing with a condition label (Renewed, Refurbished, Used).");
-      rules.push("- Pay special attention to chipset/release year differences.");
-    }
-  }
-
-  // ── BRAND NEW LENS & CAMERA ──────────────────────────────
-  if (mappingCategory === "MAPPING BRAND NEW Lens dan Camera") {
-    rules.push("LENS & CAMERA MAPPING — EXTRA PRECISION REQUIRED. One letter difference = different product.");
-
-    if (scraperTarget === "amazon") {
-      rules.push("STORE: Amazon (amazon.com.au) — LENS/CAMERA rules");
-      rules.push("- Same rejection rules as Brand New: no bonus accessories, no AU version, no pre-order, warranty ≤ 1 year.");
-      rules.push("- REJECT any listing with a condition label.");
-      rules.push("- Be EXTREMELY precise with model names. E.g., 'RF 24-70mm f/2.8L IS USM' ≠ 'RF 24-70mm f/4L IS STM'.");
     } else if (scraperTarget === "digidirect") {
       rules.push("STORE: Digidirect (digidirect.com.au)");
       rules.push("- Search bar shows inline results; matched text is bolded.");
@@ -115,6 +106,25 @@ function buildStoreRules(scraperTarget: ScraperTarget, mappingCategory: MappingC
       rules.push("STORE: Georges (georges.com.au)");
       rules.push("- Search is relatively accurate.");
       rules.push("- Products may be NESTED — must select correct variant for usable URL.");
+    }
+
+    const storeRules = catRules.stores[scraperTarget];
+    if (storeRules) {
+      if (storeRules.rejectBonusAccessories) {
+        rules.push("- REJECT listings with bonus accessories (case, screen protector, earphones, etc.).");
+      }
+      if (storeRules.maxWarrantyYears) {
+        rules.push(`- REJECT listings with warranty > ${storeRules.maxWarrantyYears} year.`);
+      }
+      if (storeRules.rejectAustralianVersion) {
+        rules.push("- REJECT 'Australian version', 'AU Stock' listings.");
+      }
+      if (storeRules.rejectPreOrder) {
+        rules.push("- REJECT pre-order listings.");
+      }
+      if (storeRules.rejectConditionLabels) {
+        rules.push("- REJECT listings with ANY condition label (Renewed, Refurbished, Used, etc.). Must be brand new.");
+      }
     }
   }
 
