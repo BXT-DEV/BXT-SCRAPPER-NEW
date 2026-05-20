@@ -1,3 +1,5 @@
-2026/05/19-13:05:36.352 7bae5 Reusing MANIFEST /Volumes/BISMILLAH/PROJECTS/BXT-SCRAPPER-NEW/chrome-data/Default/Local Storage/leveldb/MANIFEST-000001
-2026/05/19-13:05:36.357 7bae5 Recovering log #33
-2026/05/19-13:05:36.357 7bae5 Reusing old log /Volumes/BISMILLAH/PROJECTS/BXT-SCRAPPER-NEW/chrome-data/Default/Local Storage/leveldb/000033.log 
+2026/05/20-11:24:49.092 ec32c Reusing MANIFEST /Volumes/BISMILLAH/PROJECTS/BXT-SCRAPPER-NEW/chrome-data/Default/Local Storage/leveldb/MANIFEST-000001
+2026/05/20-11:24:49.137 ec32c Recovering log #33
+2026/05/20-11:24:49.159 ec32c Level-0 table #35: started
+2026/05/20-11:24:49.207 ec32c Level-0 table #35: 375314 bytes OK
+2026/05/20-11:24:49.238 ec32c Delete type=0 #33

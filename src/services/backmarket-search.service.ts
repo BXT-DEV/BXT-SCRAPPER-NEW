@@ -41,11 +41,27 @@ export class BackmarketSearchService {
   private readonly domain: string;
   private readonly maxResults: number;
   private static loggedInChecked = false;
+  private static sessionWarmedUp = false;
 
   constructor(domain: string, maxResults: number) {
     this.domain = domain;
     this.maxResults = maxResults;
   }
+
+  /**
+   * Search bar selectors — Backmarket uses various data-qa/data-test attributes.
+   * We try multiple selectors to handle UI changes.
+   */
+  private static readonly SEARCH_INPUT_SELECTORS = [
+    'input[data-qa="search-bar-input"]',
+    'input[data-test="search-bar-input"]',
+    'input[name="q"]',
+    'input[type="search"]',
+    'input[placeholder*="Search"]',
+    'input[placeholder*="search"]',
+    'input[aria-label*="Search"]',
+    'input[aria-label*="search"]',
+  ];
 
   async searchProduct(page: Page, productQuery: string): Promise<AmazonSearchResult[]> {
     try {
@@ -54,75 +70,30 @@ export class BackmarketSearchService {
         BackmarketSearchService.loggedInChecked = true;
       }
 
-      // Use explicit %20 instead of + for spaces to prevent weird redirects
-      // Adding a timestamp cache-buster can sometimes stop the server from "normalizing" the URL to a broken version.
-      const encodedQuery = productQuery.split(' ').join('%20');
-      const searchUrl = `https://${this.domain}/en-au/search?q=${encodedQuery}&t=${Date.now()}`;
-      logger.info(`Searching via URL: ${searchUrl}`);
-      
-      await page.goto(searchUrl, {
-        waitUntil: "domcontentloaded",
-        timeout: 30000,
-      });
-      await randomDelay(2000, 3000);
+      // Warm up session on first search — build "trust score" by browsing naturally
+      if (!BackmarketSearchService.sessionWarmedUp) {
+        await this.warmupBrowse(page);
+        BackmarketSearchService.sessionWarmedUp = true;
+      }
 
-      // Handle Cookies (Didomi / Backmarket consent modal) - only need to do this once per session usually, but safe to check
-      try {
-        const cookieButton = page.locator('#btn-toggle-save, button:has-text("Save"), button:has-text("Accept")').first();
-        if (await cookieButton.isVisible({ timeout: 3000 })) {
-           await cookieButton.click({ force: true }).catch(() => {});
-           await randomDelay(1000, 2000);
-        }
-      } catch (e) {}
-      
-      // RACING GRAB: Continuously monitor DOM and return results the moment they appear
-      // This catches the data if it "flashes" before a redirect or shadowban kicks in.
-      const startTime = Date.now();
-      const handle = await page.waitForFunction(({ max, start }) => {
-        const cardSelectors = 'a[data-qa="product-thumb"], [data-test="product-card"] a, .productCard a, a.productCard, a[href*="/en-au/p/"]';
-        const cards = document.querySelectorAll(cardSelectors);
-        
-        if (cards.length > 0) {
-          const items: any[] = [];
-          for (const card of Array.from(cards).slice(0, max)) {
-            const titleEl = card.querySelector('h2, .productTitle, [data-qa="product-title"]');
-            const priceEl = card.querySelector('[data-qa="price"]');
-            if (!titleEl) continue;
+      // Dismiss cookie consent if present
+      await this.dismissCookieConsent(page);
 
-            const title = titleEl.textContent?.trim() || "";
-            const rawUrl = card.getAttribute('href') || "";
-            const url = rawUrl.startsWith('http') ? rawUrl : `https://${window.location.host}${rawUrl}`;
-            
-            let price = null;
-            if (priceEl) {
-              const match = priceEl.textContent?.replace(/[^0-9.]/g, "");
-              if (match) price = parseFloat(match);
-            }
-            items.push({ title, price, url, rating: null, reviewCount: null, isPrime: false });
-          }
-          if (items.length > 0) return items;
-        }
+      // Step 1: Search via search bar (human-like) — with fallback to URL navigation
+      const searchSuccess = await this.searchViaSearchBar(page, productQuery);
+      if (!searchSuccess) {
+        logger.warn("Search bar interaction failed. Falling back to URL navigation...");
+        await this.searchViaUrl(page, productQuery);
+      }
 
-        // Only allow "Nothing to see here" to trigger AFTER at least 3 seconds of waiting
-        const elapsed = Date.now() - start;
-        if (elapsed > 3000) {
-          if (document.body.innerText.includes("Nothing to see here") || 
-              document.body.innerText.includes("No results") || 
-              document.body.innerText.includes("We couldn't find")) {
-            return [];
-          }
-        }
+      // Step 2: Wait for results to load naturally
+      await randomDelay(2000, 4000);
 
-        return null; // Keep waiting
-      }, { max: this.maxResults, start: startTime }, { 
-        timeout: 20000, 
-        polling: 50 
-      }).catch((e) => {
-        logger.warn(`Racing Grab timed out: ${e.message}`);
-        return null;
-      });
+      // Step 3: Simulate human reading — scroll down a bit
+      await this.humanScroll(page);
 
-      const results: AmazonSearchResult[] = handle ? (await handle.jsonValue() as AmazonSearchResult[]) : [];
+      // Step 4: Extract search results with gentle DOM polling
+      const results = await this.extractSearchResults(page);
 
       logger.info(`Found ${results.length} results on Backmarket.`);
       return results;
@@ -130,6 +101,236 @@ export class BackmarketSearchService {
       logger.error(`Backmarket Search failed: ${(error as Error).message}`);
       return [];
     }
+  }
+
+  /**
+   * Browse homepage naturally to build session trust before searching.
+   * Backmarket scores sessions — cold sessions that jump to search are flagged.
+   */
+  private async warmupBrowse(page: Page): Promise<void> {
+    try {
+      logger.info("Warming up Backmarket session...");
+      const currentUrl = page.url();
+      const isAlreadyOnBackmarket = currentUrl.includes(this.domain);
+
+      if (!isAlreadyOnBackmarket) {
+        await page.goto(`https://${this.domain}/en-au`, {
+          waitUntil: "domcontentloaded",
+          timeout: 30000,
+        });
+        await randomDelay(2000, 4000);
+      }
+
+      // Dismiss cookie consent
+      await this.dismissCookieConsent(page);
+
+      // Simulate a human browsing: scroll around the homepage
+      await this.humanScroll(page);
+      await randomDelay(1000, 2000);
+
+      // Move mouse randomly to simulate reading
+      await moveMouseRandomly(page);
+      await randomDelay(500, 1500);
+
+      logger.info("Backmarket session warm-up complete.");
+    } catch (err) {
+      logger.warn(`Warmup browse failed: ${(err as Error).message}. Proceeding anyway.`);
+    }
+  }
+
+  /**
+   * Search using the on-page search bar — the natural, human way.
+   * Returns true if we successfully submitted a search, false if the search bar wasn't found.
+   */
+  private async searchViaSearchBar(page: Page, query: string): Promise<boolean> {
+    try {
+      // Ensure we're on a Backmarket page where the search bar exists
+      const currentUrl = page.url();
+      if (!currentUrl.includes(this.domain)) {
+        await page.goto(`https://${this.domain}/en-au`, {
+          waitUntil: "domcontentloaded",
+          timeout: 30000,
+        });
+        await randomDelay(1500, 2500);
+      }
+
+      // Find the search input
+      let searchInput = null;
+      for (const selector of BackmarketSearchService.SEARCH_INPUT_SELECTORS) {
+        const el = page.locator(selector).first();
+        if (await el.isVisible({ timeout: 2000 }).catch(() => false)) {
+          searchInput = el;
+          logger.info(`Found search bar with selector: ${selector}`);
+          break;
+        }
+      }
+
+      if (!searchInput) {
+        // Try clicking a search icon/button to reveal the input
+        const searchTriggers = [
+          '[data-qa="search-bar"]',
+          '[data-test="search-bar"]',
+          'button[aria-label*="Search"]',
+          'button[aria-label*="search"]',
+          'a[aria-label*="Search"]',
+          '[data-qa="search-icon"]',
+        ];
+        for (const triggerSel of searchTriggers) {
+          const trigger = page.locator(triggerSel).first();
+          if (await trigger.isVisible({ timeout: 1000 }).catch(() => false)) {
+            await trigger.click();
+            await randomDelay(500, 1000);
+            break;
+          }
+        }
+
+        // Try finding input again after clicking trigger
+        for (const selector of BackmarketSearchService.SEARCH_INPUT_SELECTORS) {
+          const el = page.locator(selector).first();
+          if (await el.isVisible({ timeout: 2000 }).catch(() => false)) {
+            searchInput = el;
+            break;
+          }
+        }
+      }
+
+      if (!searchInput) {
+        logger.warn("Could not find Backmarket search bar.");
+        return false;
+      }
+
+      // Step 1: Click the search input to focus it
+      await searchInput.click();
+      await randomDelay(300, 700);
+
+      // Step 2: Clear any existing text (Ctrl+A / Cmd+A then Delete)
+      const modKey = getModifierKey();
+      await page.keyboard.press(`${modKey}+a`);
+      await randomDelay(100, 200);
+      await page.keyboard.press("Backspace");
+      await randomDelay(200, 400);
+
+      // Step 3: Type the query like a human (character by character with random delays)
+      logger.info(`Typing search query: "${query}"`);
+      await humanType(page, query);
+      await randomDelay(500, 1200);
+
+      // Step 4: Press Enter to submit the search
+      await page.keyboard.press("Enter");
+      logger.info("Search submitted via Enter key.");
+
+      // Step 5: Wait for navigation / search results page to load
+      await page.waitForLoadState("domcontentloaded", { timeout: 15000 }).catch(() => {});
+      await randomDelay(1500, 3000);
+
+      return true;
+    } catch (err) {
+      logger.warn(`Search bar interaction error: ${(err as Error).message}`);
+      return false;
+    }
+  }
+
+  /**
+   * Fallback: Navigate directly to search URL (less stealthy, but works if search bar fails).
+   */
+  private async searchViaUrl(page: Page, query: string): Promise<void> {
+    const encodedQuery = encodeURIComponent(query);
+    const searchUrl = `https://${this.domain}/en-au/search?q=${encodedQuery}`;
+    logger.info(`Fallback: navigating to ${searchUrl}`);
+
+    await page.goto(searchUrl, {
+      waitUntil: "domcontentloaded",
+      timeout: 30000,
+    });
+    await randomDelay(2000, 3000);
+  }
+
+  /**
+   * Dismiss cookie/consent modals if visible.
+   */
+  private async dismissCookieConsent(page: Page): Promise<void> {
+    try {
+      const cookieButton = page.locator(
+        '#btn-toggle-save, button:has-text("Save"), button:has-text("Accept"), [data-qa="accept-cta"]'
+      ).first();
+      if (await cookieButton.isVisible({ timeout: 2000 })) {
+        await cookieButton.click({ force: true }).catch(() => {});
+        await randomDelay(800, 1500);
+      }
+    } catch (_) {
+      // No consent modal — that's fine
+    }
+  }
+
+  /**
+   * Simulate human scrolling behavior on the current page.
+   */
+  private async humanScroll(page: Page): Promise<void> {
+    try {
+      const scrollSteps = Math.floor(Math.random() * 3) + 1; // 1-3 scrolls
+      for (let i = 0; i < scrollSteps; i++) {
+        const scrollAmount = Math.floor(Math.random() * 300) + 100; // 100-400px
+        await page.mouse.wheel(0, scrollAmount);
+        await randomDelay(300, 800);
+      }
+    } catch (_) {
+      // Scroll failed — non-critical
+    }
+  }
+
+  /**
+   * Extract search results from the page with gentle DOM polling (250ms instead of 50ms).
+   * Waits naturally for results to appear rather than aggressively racing.
+   */
+  private async extractSearchResults(page: Page): Promise<AmazonSearchResult[]> {
+    const startTime = Date.now();
+    const handle = await page.waitForFunction(({ max, start }) => {
+      const cardSelectors = 'a[data-qa="product-thumb"], [data-test="product-card"] a, .productCard a, a.productCard, a[href*="/en-au/p/"]';
+      const cards = document.querySelectorAll(cardSelectors);
+
+      if (cards.length > 0) {
+        const items: any[] = [];
+        for (const card of Array.from(cards).slice(0, max)) {
+          const titleEl = card.querySelector('h2, .productTitle, [data-qa="product-title"]');
+          const priceEl = card.querySelector('[data-qa="price"]');
+          if (!titleEl) continue;
+
+          const title = titleEl.textContent?.trim() || "";
+          const rawUrl = card.getAttribute('href') || "";
+          const url = rawUrl.startsWith('http') ? rawUrl : `https://${window.location.host}${rawUrl}`;
+
+          let price = null;
+          if (priceEl) {
+            const match = priceEl.textContent?.replace(/[^0-9.]/g, "");
+            if (match) price = parseFloat(match);
+          }
+          items.push({ title, price, url, rating: null, reviewCount: null, isPrime: false });
+        }
+        if (items.length > 0) return items;
+      }
+
+      // Only treat "no results" messages after at least 5 seconds of waiting
+      // (gives time for legitimate results to render via JS)
+      const elapsed = Date.now() - start;
+      if (elapsed > 5000) {
+        const bodyText = document.body.innerText;
+        if (bodyText.includes("Nothing to see here") ||
+            bodyText.includes("No results") ||
+            bodyText.includes("We couldn't find")) {
+          return [];
+        }
+      }
+
+      return null; // Keep waiting
+    }, { max: this.maxResults, start: startTime }, {
+      timeout: 25000,
+      polling: 250,  // Gentle polling — less detectable than 50ms
+    }).catch((e) => {
+      logger.warn(`Result extraction timed out: ${e.message}`);
+      return null;
+    });
+
+    return handle ? (await handle.jsonValue() as AmazonSearchResult[]) : [];
   }
 
   private async ensureLoggedIn(page: Page): Promise<void> {

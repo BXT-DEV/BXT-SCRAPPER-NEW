@@ -31,7 +31,7 @@ import { CentrecomSearchService } from "./services/centrecom-search.service.js";
 import { DigidirectSearchService } from "./services/digidirect-search.service.js";
 import { GeorgesSearchService } from "./services/georges-search.service.js";
 import { GeminiMatcherService } from "./services/gemini-matcher.service.js";
-import { getBroadSearchQuery } from "./utils/product-utils.js";
+import { getSmartSearchQuery, getBroadSearchQuery } from "./utils/product-utils.js";
 import type { BecexProduct, ScrapedResult, AmazonSearchResult } from "./types/index.js";
 import fs from "fs";
 import type { Page } from "playwright";
@@ -210,13 +210,21 @@ async function processSingleProduct(
     }
   }
 
-  // Step 1: Human-like Search
-  const searchQuery = getBroadSearchQuery(product.productName);
+  // Step 1: Smart Search (with storage/model specificity)
+  const smartQuery = getSmartSearchQuery(product.productName);
+  const broadQuery = getBroadSearchQuery(product.productName);
 
   logger.info(`  Original : "${product.productName}"`);
-  logger.info(`  Broad    : "${searchQuery}"`);
+  logger.info(`  Smart    : "${smartQuery}"`);
+  logger.info(`  Broad    : "${broadQuery}"`);
 
-  const searchResults = await searchService.searchProduct(page, searchQuery);
+  let searchResults = await searchService.searchProduct(page, smartQuery);
+
+  // Fallback: If smart query returns nothing, try the broader query
+  if (searchResults.length === 0 && smartQuery !== broadQuery) {
+    logger.info(`  Smart query returned 0 results. Retrying with broad query...`);
+    searchResults = await searchService.searchProduct(page, broadQuery);
+  }
 
   if (searchResults.length === 0) {
     return buildNoMatchResult(product);

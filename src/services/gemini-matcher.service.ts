@@ -131,6 +131,10 @@ function buildStoreRules(scraperTarget: ScraperTarget, mappingCategory: MappingC
   return rules.join("\n");
 }
 
+// ── Constants ──────────────────────────────────────────────
+const MIN_CONFIDENCE_THRESHOLD = 0.7;
+const MAX_GEMINI_RETRIES = 2;
+
 // ── Prompt template ────────────────────────────────────────
 const MATCH_PROMPT_TEMPLATE = `You are a product matching expert. Your job is to determine which search result in the provided SCREENSHOT and LIST is the EXACT SAME product as the source product.
 
@@ -147,19 +151,28 @@ CURRENT STORE: {{SCRAPER_TARGET}}
 {{STORE_RULES}}
 
 CRITICAL MATCHING RULES:
-1. **STORAGE & COLOR ARE ABSOLUTE**: If the source says "Titanium Blue" and the result says "Titanium Grey", it is NOT a match. If the source says "1TB" and the result says "512GB", it is NOT a match.
-2. **EXACT KEYWORDS**: Look for exact matches for storage (e.g., 128GB, 256GB, 512GB, 1TB) and color names.
-3. **CONDITION MATCHING**: For Refurbished, ensure the condition maps correctly per the store-specific rules above.
-4. **YEAR MATCHING**: If the source product specifies a release year (e.g., 2021, 2022, 2023), the matched result MUST be from the same year. Do NOT match a 2022 product with a 2023 listing.
-5. If multiple results match, pick the one that matches the title most closely.
-6. If none match or color/specs differ, set isMatch to false.
+1. **MODEL NUMBER MUST MATCH EXACTLY**: The exact model identifier must match. "EOS 250D" is NOT "EOS 2000D". "iPhone 15" is NOT "iPhone 15 Pro". "Galaxy S24" is NOT "Galaxy S24+". "iPad Air M2" is NOT "iPad Air M1". Pay close attention to every digit and word in the model name.
+2. **STORAGE & COLOR ARE ABSOLUTE**: If the source says "Titanium Blue" and the result says "Titanium Grey", it is NOT a match. If the source says "1TB" and the result says "512GB", it is NOT a match.
+3. **EXACT KEYWORDS**: Look for exact matches for storage (e.g., 128GB, 256GB, 512GB, 1TB) and color names.
+4. **CONDITION MATCHING**: For Refurbished, ensure the condition maps correctly per the store-specific rules above.
+5. **YEAR MATCHING**: If the source product specifies a release year (e.g., 2021, 2022, 2023), the matched result MUST be from the same year. Do NOT match a 2022 product with a 2023 listing.
+6. **BODY vs KIT**: "Body Only" is NOT the same as a "Kit" with a lens. If the source says "Body Only", reject any result that includes a lens kit.
+7. If multiple results match, pick the one that matches the title most closely.
+8. If NONE match or color/specs/model differ, you MUST set isMatch to false. Do NOT force a match.
+9. Set confidence between 0.0 and 1.0. Only use >= 0.8 when model, storage, color, and condition ALL match exactly.
+
+EXAMPLES OF CORRECT MATCHING:
+- Source: "Canon EOS 250D Body Only Black" → Result: "Canon EOS 2000D Kit 18-55mm" → isMatch: FALSE (different model: 250D ≠ 2000D, body ≠ kit)
+- Source: "iPhone 15 Pro 256GB Titanium Blue" → Result: "iPhone 15 Pro 256GB Titanium Blue" → isMatch: TRUE, confidence: 0.95
+- Source: "Samsung Galaxy S25 Ultra 512GB Black" → Result: "Samsung Galaxy S25 Ultra 256GB Black" → isMatch: FALSE (512GB ≠ 256GB)
+- Source: "Canon EOS R1 Body Only" → Result: "Canon EOS R8 Body Only" → isMatch: FALSE (R1 ≠ R8)
 
 Respond ONLY with a valid JSON object:
 {
   "isMatch": boolean,
-  "confidence": number,
-  "matchedResultIndex": number (0-based index from the list),
-  "reasoning": "short explanation highlighting why storage/color/condition matches or why rejected"
+  "confidence": number (0.0 to 1.0),
+  "matchedResultIndex": number (0-based index from the list, -1 if no match),
+  "reasoning": "short explanation highlighting why model/storage/color/condition matches or why rejected"
 }`;
 
 export class GeminiMatcherService {
@@ -167,6 +180,7 @@ export class GeminiMatcherService {
   private currentKeyIndex: number;
   private readonly mappingCategory: MappingCategory;
   private readonly scraperTarget: ScraperTarget;
+  private consecutiveFailures: number = 0;
 
   constructor(apiKeys: string[], mappingCategory: MappingCategory, scraperTarget: ScraperTarget) {
     this.apiKeys = apiKeys;
@@ -241,8 +255,9 @@ export class GeminiMatcherService {
       });
     }
 
-    // Try with key rotation on quota errors
-    const startKeyIndex = this.currentKeyIndex;
+    // Try with key rotation on quota errors + retry on transient failures
+    let retryCount = 0;
+
     while (true) {
       try {
         const genAI = this.getGenAI();
@@ -258,16 +273,23 @@ export class GeminiMatcherService {
         const text = response.text || "";
         const match = this.parseGeminiResponse(text, searchResults.length);
 
+        // --- Confidence Threshold Gate ---
+        if (match.isMatch && match.confidence < MIN_CONFIDENCE_THRESHOLD) {
+          logger.warn(`Gemini match REJECTED due to low confidence (${match.confidence} < ${MIN_CONFIDENCE_THRESHOLD}) for: ${becexProduct.productName}`);
+          return { isMatch: false, confidence: match.confidence, matchedResultIndex: -1, reasoning: `Low confidence (${match.confidence}): ${match.reasoning}` };
+        }
+
         // --- Post-Verification (Zero-Debt Safety Net) ---
         if (match.isMatch && match.matchedResultIndex >= 0) {
           const result = searchResults[match.matchedResultIndex];
-          const isVerified = this.verifyMatchConsistency(becexProduct.productName, result.title);
-          if (!isVerified) {
-            logger.warn(`Gemini match REJECTED by local verification for: ${becexProduct.productName} -> ${result.title}`);
-            return { isMatch: false, confidence: 0, matchedResultIndex: -1, reasoning: "Rejected by local verification (Color/Storage mismatch)" };
+          const verification = this.verifyMatchConsistency(becexProduct.productName, result.title);
+          if (!verification.passed) {
+            logger.warn(`Gemini match REJECTED by local verification for: ${becexProduct.productName} -> ${result.title} (${verification.reason})`);
+            return { isMatch: false, confidence: 0, matchedResultIndex: -1, reasoning: `Rejected by local verification: ${verification.reason}` };
           }
         }
 
+        this.consecutiveFailures = 0;
         return match;
       } catch (error) {
         const err = error as Error;
@@ -285,14 +307,26 @@ export class GeminiMatcherService {
           }
         }
 
-        // Non-quota error — fallback
-        logger.error(`Gemini Error: ${err.message}`);
-        return { isMatch: true, confidence: 0.5, matchedResultIndex: 0, reasoning: "AI Error fallback" };
+        // Non-quota error — retry before giving up
+        retryCount++;
+        this.consecutiveFailures++;
+        logger.error(`Gemini Error (attempt ${retryCount}/${MAX_GEMINI_RETRIES}): ${err.message}`);
+
+        if (retryCount < MAX_GEMINI_RETRIES) {
+          const backoffMs = retryCount * 2000;
+          logger.info(`Retrying Gemini in ${backoffMs}ms...`);
+          await new Promise(resolve => setTimeout(resolve, backoffMs));
+          continue;
+        }
+
+        // All retries exhausted — mark as no_match (NEVER blindly pick result[0])
+        logger.error(`Gemini failed after ${MAX_GEMINI_RETRIES} retries. Marking as no_match.`);
+        return { isMatch: false, confidence: 0, matchedResultIndex: -1, reasoning: `AI Error after ${MAX_GEMINI_RETRIES} retries: ${err.message}` };
       }
     }
   }
 
-  public verifyMatchConsistency(sourceName: string, targetTitle: string): boolean {
+  public verifyMatchConsistency(sourceName: string, targetTitle: string): { passed: boolean; reason: string } {
     const sourceLower = sourceName.toLowerCase();
     const targetLower = targetTitle.toLowerCase();
 
@@ -302,7 +336,20 @@ export class GeminiMatcherService {
     const sourceNorm = normalize(sourceLower);
     const targetNorm = normalize(targetLower);
 
-    // 1. Storage/RAM Check (e.g., 128GB, 1TB, 8GB RAM)
+    // 1. Model Number Check (e.g., "250D" vs "2000D", "R1" vs "R8", "S25" vs "S24")
+    const modelCheck = this.verifyModelNumber(sourceLower, targetLower);
+    if (!modelCheck.passed) {
+      return modelCheck;
+    }
+
+    // 2. Body vs Kit Check
+    const sourceIsBodyOnly = sourceLower.includes("body only") || sourceLower.includes("body digital");
+    const targetHasLensKit = /\b(kit|lens|\d+-\d+mm)\b/i.test(targetLower) && !targetLower.includes("kit box");
+    if (sourceIsBodyOnly && targetHasLensKit) {
+      return { passed: false, reason: `Body-only source matched to lens kit target` };
+    }
+
+    // 3. Storage/RAM Check (e.g., 128GB, 1TB, 8GB RAM)
     const storagePattern = /\b(\d+\s*(?:GB|TB))\b/gi;
     const sourceStorages = sourceName.match(storagePattern) || [];
     
@@ -313,11 +360,11 @@ export class GeminiMatcherService {
         if (normStorage === "1tb" && (targetNorm.includes("1000gb") || targetNorm.includes("1024gb"))) continue;
         if (normStorage === "1000gb" && targetNorm.includes("1tb")) continue;
         
-        return false;
+        return { passed: false, reason: `Storage mismatch: source has ${storage}, target missing` };
       }
     }
 
-    // 2. Color Check
+    // 4. Color Check
     const commonColors = [
       "blue", "grey", "gray", "black", "white", "silver", "gold", "green", "pink", "purple", "violet", "orange", "yellow", "cream", "natural", "titanium"
     ];
@@ -330,23 +377,88 @@ export class GeminiMatcherService {
           if (color === "gray" && targetLower.includes("grey")) continue;
           // Special case for Space Grey
           if (color === "grey" && targetLower.includes("space")) continue;
-          return false;
+          return { passed: false, reason: `Color mismatch: source has "${color}", target missing` };
         }
       }
     }
 
-    // 3. Year Check (e.g., 2020, 2021, 2022, 2023, 2024)
+    // 5. Year Check (e.g., 2020, 2021, 2022, 2023, 2024)
     const yearPattern = /\b(201\d|202\d)\b/g;
     const sourceYears: string[] = sourceName.match(yearPattern) ?? [];
     const targetYears: string[] = targetTitle.match(yearPattern) ?? [];
 
     for (const year of sourceYears) {
       if (targetYears.length > 0 && !targetYears.includes(year)) {
-        return false;
+        return { passed: false, reason: `Year mismatch: source has ${year}, target has ${targetYears.join(",")}` };
       }
     }
 
-    return true;
+    return { passed: true, reason: "All checks passed" };
+  }
+
+  /**
+   * Extracts and compares model numbers/identifiers between source and target.
+   * Catches cases like "EOS 250D" vs "EOS 2000D", "R1" vs "R8", "iPhone 15" vs "iPhone 15 Pro".
+   */
+  private verifyModelNumber(sourceLower: string, targetLower: string): { passed: boolean; reason: string } {
+    // Remove condition/spec suffixes for cleaner model extraction
+    const cleanForModel = (text: string) => 
+      text.replace(/\b(excellent|pristine|good|very good|refurbished|renewed|brand new)\b/gi, "")
+          .replace(/\b(australian stock|au stock|au version)\b/gi, "")
+          .replace(/\(.*?\)/g, "")
+          .replace(/\b\d+\s*(gb|tb|mb)\b/gi, "")
+          .trim();
+
+    const sourceClean = cleanForModel(sourceLower);
+    const targetClean = cleanForModel(targetLower);
+
+    // Model-number patterns to extract and compare
+    const modelPatterns: RegExp[] = [
+      // Camera models: "EOS 250D", "EOS R10", "EOS R1", "EOS R5 Mark II"
+      /\beos\s+([a-z0-9]+(?:\s+mark\s+[iv]+)?)/i,
+      // iPhone models: "iPhone 15", "iPhone 15 Pro", "iPhone 15 Pro Max"
+      /\biphone\s+(\d+(?:\s+pro)?(?:\s+max)?(?:\s+plus)?)/i,
+      // Samsung Galaxy models: "Galaxy S25", "Galaxy S25 Ultra", "Galaxy S25+", "Galaxy A14"
+      /\bgalaxy\s+([a-z]\d+(?:\+|\s+ultra|\s+fe|\s+plus)?)/i,
+      // iPad models: "iPad Pro 11", "iPad Air M2", "iPad Mini", "iPad 10"
+      /\bipad\s+(pro|air|mini)?\s*(\d+)?/i,
+      // MacBook models: "MacBook Pro 14", "MacBook Air M3"
+      /\bmacbook\s+(pro|air)?\s*(\d+)?/i,
+      // Google Pixel: "Pixel 9", "Pixel 9 Pro"
+      /\bpixel\s+(\d+(?:\s+pro)?(?:\s+a)?(?:\s+xl)?)/i,
+      // Generic alphanumeric model numbers: "A14", "S25", "2000D", "250D"
+      /\b([a-z]?\d{2,5}[a-z]?)\b/i,
+    ];
+
+    for (const pattern of modelPatterns) {
+      const sourceMatch = sourceClean.match(pattern);
+      const targetMatch = targetClean.match(pattern);
+
+      if (sourceMatch && targetMatch) {
+        const sourceModel = sourceMatch[0].trim().toLowerCase();
+        const targetModel = targetMatch[0].trim().toLowerCase();
+
+        // If source model is clearly present in target (or vice versa), pass
+        if (sourceModel === targetModel) continue;
+
+        // Check if one is a substring-but-different (e.g., "iphone 15" in "iphone 15 pro")
+        // Source: "iPhone 15" must NOT match "iPhone 15 Pro" (Pro is extra)
+        if (sourceModel !== targetModel) {
+          // Only flag if the pattern is specific enough (skip generic single-number patterns)
+          const isSpecificPattern = pattern.source.includes("eos") || 
+                                     pattern.source.includes("iphone") || 
+                                     pattern.source.includes("galaxy") || 
+                                     pattern.source.includes("pixel") ||
+                                     pattern.source.includes("ipad") ||
+                                     pattern.source.includes("macbook");
+          if (isSpecificPattern) {
+            return { passed: false, reason: `Model mismatch: "${sourceMatch[0]}" ≠ "${targetMatch[0]}"` };
+          }
+        }
+      }
+    }
+
+    return { passed: true, reason: "Model check passed" };
   }
 
   private parseGeminiResponse(responseText: string, maxResults: number): GeminiMatchResult {
@@ -354,16 +466,27 @@ export class GeminiMatcherService {
       const cleaned = responseText.replace(/```json\s?|```/g, "").trim();
       const parsed = JSON.parse(cleaned);
       let index = parseInt(parsed.matchedResultIndex);
-      if (isNaN(index) || index < 0 || index >= maxResults) index = 0;
+
+      // If index is invalid, treat as no match (NEVER blindly pick result[0])
+      if (isNaN(index) || index < 0 || index >= maxResults) {
+        return {
+          isMatch: false,
+          confidence: 0,
+          matchedResultIndex: -1,
+          reasoning: `Invalid matchedResultIndex (${parsed.matchedResultIndex}). Treating as no_match.`
+        };
+      }
 
       return {
         isMatch: !!parsed.isMatch,
         confidence: parsed.confidence || 0,
-        matchedResultIndex: index,
+        matchedResultIndex: parsed.isMatch ? index : -1,
         reasoning: parsed.reasoning || ""
       };
-    } catch {
-      return { isMatch: true, confidence: 0, matchedResultIndex: 0, reasoning: "Parse error fallback" };
+    } catch (parseError) {
+      // Parse error — NEVER blindly pick result[0]. Return no_match.
+      logger.warn(`Failed to parse Gemini response: ${(parseError as Error).message}. Raw: ${responseText.substring(0, 200)}`);
+      return { isMatch: false, confidence: 0, matchedResultIndex: -1, reasoning: "Parse error: AI response was not valid JSON" };
     }
   }
 }

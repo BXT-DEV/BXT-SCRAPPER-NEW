@@ -1,37 +1,114 @@
 // ============================================================
 // Browser Service
-// Playwright browser lifecycle with stealth anti-detection
+// Launches REAL Chrome (Guest mode) + connects via CDP
+// This approach is undetectable because Chrome runs as a normal
+// process — not launched by automation tools.
 // ============================================================
 
-import { chromium, type BrowserContext, type Page } from "playwright";
+import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import path from "path";
 import fs from "fs";
-import { exec } from "child_process";
+import { exec, spawn, type ChildProcess } from "child_process";
 import { promisify } from "util";
 import { logger } from "../utils/logger.js";
 import { config } from "../config/index.js";
+import http from "http";
 
 const execAsync = promisify(exec);
 
-// Randomize viewport to avoid fingerprinting
-const VIEWPORT_BASE = { width: 1920, height: 1080 };
-const VIEWPORT_JITTER = 50;
+const CDP_PORT = 9222;
+const MAX_CDP_WAIT_MS = 15000;
+const CDP_POLL_INTERVAL_MS = 500;
 
-function randomViewport() {
-  const jitterW = Math.floor(Math.random() * VIEWPORT_JITTER * 2) - VIEWPORT_JITTER;
-  const jitterH = Math.floor(Math.random() * VIEWPORT_JITTER * 2) - VIEWPORT_JITTER;
-  return {
-    width: VIEWPORT_BASE.width + jitterW,
-    height: VIEWPORT_BASE.height + jitterH,
-  };
+/**
+ * Resolves the path to the real Google Chrome executable.
+ */
+function getChromePath(): string {
+  const platform = process.platform;
+
+  if (platform === "darwin") {
+    const paths = [
+      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      `${process.env.HOME}/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`,
+    ];
+    for (const p of paths) {
+      if (fs.existsSync(p)) return p;
+    }
+  } else if (platform === "win32") {
+    const paths = [
+      "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+      `${process.env.LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe`,
+    ];
+    for (const p of paths) {
+      if (fs.existsSync(p)) return p;
+    }
+  } else {
+    // Linux
+    const paths = ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium-browser"];
+    for (const p of paths) {
+      if (fs.existsSync(p)) return p;
+    }
+  }
+
+  throw new Error(
+    "Google Chrome not found. Please install Google Chrome.\n" +
+    "  Mac: https://www.google.com/chrome/\n" +
+    "  Windows: https://www.google.com/chrome/"
+  );
 }
 
 /**
- * Manages Playwright browser lifecycle with stealth configuration.
- * Singleton — call initialize() once, then newPage() for each task.
+ * Polls the CDP endpoint until Chrome is ready to accept connections.
+ */
+async function waitForCdpReady(port: number, timeoutMs: number): Promise<string> {
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < timeoutMs) {
+    try {
+      const wsUrl = await new Promise<string>((resolve, reject) => {
+        const req = http.get(`http://127.0.0.1:${port}/json/version`, (res) => {
+          let body = "";
+          res.on("data", (chunk) => (body += chunk));
+          res.on("end", () => {
+            try {
+              const json = JSON.parse(body);
+              resolve(json.webSocketDebuggerUrl);
+            } catch {
+              reject(new Error("Invalid CDP response"));
+            }
+          });
+        });
+        req.on("error", reject);
+        req.setTimeout(2000, () => {
+          req.destroy();
+          reject(new Error("CDP timeout"));
+        });
+      });
+
+      return wsUrl;
+    } catch {
+      await new Promise((r) => setTimeout(r, CDP_POLL_INTERVAL_MS));
+    }
+  }
+
+  throw new Error(`Chrome CDP not ready after ${timeoutMs}ms. Is Chrome running on port ${port}?`);
+}
+
+/**
+ * Manages browser lifecycle using REAL Chrome (Guest mode) + CDP connection.
+ *
+ * WHY THIS APPROACH:
+ * - Playwright's `launchPersistentContext` adds internal automation flags
+ *   that anti-bot systems (DataDome, PerimeterX, etc.) detect.
+ * - Launching Chrome as a normal subprocess with `--guest` and connecting
+ *   via CDP makes it indistinguishable from a real user session.
+ * - Guest mode = clean profile every time, no leftover cookies/fingerprints.
  */
 export class BrowserService {
+  private browser: Browser | null = null;
   private context: BrowserContext | null = null;
+  private chromeProcess: ChildProcess | null = null;
   private readonly proxyUrl: string | null;
 
   constructor(proxyUrl: string | null) {
@@ -41,119 +118,95 @@ export class BrowserService {
   async initialize(): Promise<void> {
     logger.info("Preparing environment...");
     await this.forceCloseChrome();
-    
-    logger.info("Launching stealth browser...");
 
-    const userDataDir = config.chromeUserDataDir;
-    if (!fs.existsSync(userDataDir)) {
-      try {
-        fs.mkdirSync(userDataDir, { recursive: true });
-      } catch (e) {
-        logger.warn(`Could not create user data directory: ${userDataDir}. Chrome might fail to launch if the path is invalid.`);
-      }
-    }
-    
-    const launchOptions: Record<string, unknown> = {
-      headless: false,
-      channel: "chrome", // Uses real Google Chrome instead of Chromium
-      ignoreDefaultArgs: ["--use-mock-keychain", "--password-store=basic", "--enable-automation"],
-      viewport: randomViewport(),
-      locale: "en-AU",
-      timezoneId: "Australia/Sydney",
-      userAgent: this.getRandomUserAgent(),
-      extraHTTPHeaders: {
-        "Accept-Language": "en-AU,en;q=0.9",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Upgrade-Insecure-Requests": "1",
-      },
-      args: [
-        "--disable-blink-features=AutomationControlled",
-        "--no-sandbox",
-        "--disable-dev-shm-usage",
-      ],
-    };
+    const chromePath = getChromePath();
+    logger.info(`Found Chrome at: ${chromePath}`);
 
-    if (this.proxyUrl) {
-      launchOptions.proxy = { server: this.proxyUrl };
-      logger.info(`Using proxy: ${this.proxyUrl.replace(/\/\/.*@/, "//***@")}`);
-    } else {
-      logger.warn("No proxy configured — Amazon may block after ~10-20 requests");
-    }
+    // Build Chrome launch arguments
+    const chromeArgs = this.buildChromeArgs(chromePath);
+    logger.info(`Launching Chrome in Guest mode (CDP port ${CDP_PORT})...`);
 
-    try {
-      this.context = await chromium.launchPersistentContext(userDataDir, launchOptions);
-    } catch (error) {
-      const msg = (error as Error).message;
-      if (msg.includes("Executable doesn't exist")) {
-        logger.error("Google Chrome is required but not found on this system.");
-        process.exit(1);
-      }
-      throw error;
-    }
-
-    // Stealth: override navigator.webdriver
-    await this.context.addInitScript(() => {
-      Object.defineProperty(navigator, "webdriver", {
-        get: () => undefined,
-      });
-
-      // Override chrome runtime
-      (window as unknown as Record<string, unknown>).chrome = { runtime: {} };
-
-      // Override permissions query
-      const originalQuery = window.navigator.permissions.query.bind(
-        window.navigator.permissions
-      );
-      window.navigator.permissions.query = (parameters: PermissionDescriptor) => {
-        if (parameters.name === "notifications") {
-          return Promise.resolve({
-            state: Notification.permission,
-          } as PermissionStatus);
-        }
-        return originalQuery(parameters);
-      };
-
-      // Override plugins length
-      Object.defineProperty(navigator, "plugins", {
-        get: () => [1, 2, 3, 4, 5],
-      });
-
-      // Override languages
-      Object.defineProperty(navigator, "languages", {
-        get: () => ["en-AU", "en"],
-      });
-
-      // WebGL Fingerprint stealth
-      const getParameter = WebGLRenderingContext.prototype.getParameter;
-      WebGLRenderingContext.prototype.getParameter = function(parameter) {
-        // UNMASKED_VENDOR_WEBGL
-        if (parameter === 37445) return "Apple Inc.";
-        // UNMASKED_RENDERER_WEBGL
-        if (parameter === 37446) return "Apple GPU";
-        return getParameter.apply(this, [parameter]);
-      };
-
-      // Hardware/Memory overrides
-      Object.defineProperty(navigator, "hardwareConcurrency", { get: () => 8 });
-      Object.defineProperty(navigator, "deviceMemory", { get: () => 8 });
-
-      // Override chrome object
-      (window as any).chrome = {
-        runtime: {},
-        loadTimes: function() {},
-        csi: function() {},
-        app: {}
-      };
+    // Launch Chrome as a real subprocess
+    this.chromeProcess = spawn(chromePath, chromeArgs, {
+      detached: false,
+      stdio: "ignore",
     });
 
-    logger.info("Browser launched successfully");
+    this.chromeProcess.on("error", (err) => {
+      logger.error(`Chrome process error: ${err.message}`);
+    });
+
+    this.chromeProcess.on("exit", (code) => {
+      logger.info(`Chrome process exited with code ${code}`);
+      this.chromeProcess = null;
+    });
+
+    // Wait for CDP to be ready
+    logger.info("Waiting for Chrome CDP to be ready...");
+    const wsUrl = await waitForCdpReady(CDP_PORT, MAX_CDP_WAIT_MS);
+    logger.info(`Chrome CDP ready: ${wsUrl}`);
+
+    // Connect Playwright to the running Chrome via CDP
+    this.browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`);
+    
+    // Get the default context (the Guest profile context)
+    const contexts = this.browser.contexts();
+    if (contexts.length > 0) {
+      this.context = contexts[0];
+    } else {
+      this.context = await this.browser.newContext();
+    }
+
+    logger.info("✅ Connected to Chrome Guest mode via CDP. Fully undetectable.");
   }
 
   async newPage(): Promise<Page> {
     if (!this.context) {
       throw new Error("Browser not initialized. Call initialize() first.");
     }
+
+    // Close any existing about:blank tabs from Chrome startup
+    const existingPages = this.context.pages();
+    for (const existingPage of existingPages) {
+      const url = existingPage.url();
+      if (url === "about:blank" || url === "chrome://newtab/" || url.startsWith("chrome://")) {
+        // Reuse this tab instead of creating a new one
+        return existingPage;
+      }
+    }
+
     return this.context.newPage();
+  }
+
+  /**
+   * Build Chrome command-line arguments for Guest mode + CDP.
+   */
+  private buildChromeArgs(chromePath: string): string[] {
+    const userDataDir = config.chromeUserDataDir;
+    const args: string[] = [
+      `--remote-debugging-port=${CDP_PORT}`,
+      `--user-data-dir=${userDataDir}`,
+      "--guest",                              // Guest mode — clean profile, no login
+      "--no-first-run",                       // Skip "Welcome to Chrome" screen
+      "--no-default-browser-check",           // Don't ask to be default browser
+      "--disable-default-apps",               // No default apps popup
+      "--disable-popup-blocking",             // Allow popups for some stores
+      "--disable-translate",                  // No translation bar
+      "--disable-background-timer-throttling",// Keep timers running in background
+      "--disable-backgrounding-occluded-windows",
+      "--disable-renderer-backgrounding",
+      "--disable-hang-monitor",
+      "--window-size=1920,1080",
+      "--lang=en-AU",
+    ];
+
+    // Proxy support
+    if (this.proxyUrl) {
+      args.push(`--proxy-server=${this.proxyUrl}`);
+      logger.info(`Using proxy: ${this.proxyUrl.replace(/\/\/.*@/, "//***@")}`);
+    }
+
+    return args;
   }
 
   private async forceCloseChrome(): Promise<void> {
@@ -161,28 +214,16 @@ export class BrowserService {
     try {
       if (platform === "darwin") {
         logger.info("Checking for running Chrome instances (Mac)...");
-        await execAsync("pkill -i 'Google Chrome'").catch(() => {});
+        // Kill any Chrome with our CDP port
+        await execAsync(`lsof -ti :${CDP_PORT} | xargs kill -9 2>/dev/null`).catch(() => {});
+        // Also kill any lingering Chrome processes
+        await execAsync("pkill -f 'Google Chrome.*--remote-debugging-port' 2>/dev/null").catch(() => {});
       } else if (platform === "win32") {
         logger.info("Checking for running Chrome instances (Windows)...");
-        await execAsync("taskkill /F /IM chrome.exe /T").catch(() => {});
+        await execAsync("taskkill /F /IM chrome.exe /T 2>nul").catch(() => {});
       }
-      // Give it a second to release file locks
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Force delete SingletonLock files that might cause Playwright to hang
-      const userDataDir = config.chromeUserDataDir;
-      const lockFiles = ["SingletonLock", "SingletonCookie", "SingletonSocket"];
-      for (const file of lockFiles) {
-        const filePath = path.join(userDataDir, file);
-        if (fs.existsSync(filePath)) {
-          try {
-            fs.unlinkSync(filePath);
-            logger.info(`Cleared stale Chrome lock file: ${file}`);
-          } catch (e) {
-            logger.warn(`Could not delete ${file}: ${(e as Error).message}`);
-          }
-        }
-      }
+      // Give it a moment to release file locks
+      await new Promise((resolve) => setTimeout(resolve, 1500));
     } catch (err) {
       logger.warn(`Attempt to force close Chrome failed: ${(err as Error).message}`);
     }
@@ -190,25 +231,28 @@ export class BrowserService {
 
   async shutdown(): Promise<void> {
     try {
-      if (this.context) {
-        await this.context.close().catch(() => {});
+      // Disconnect Playwright (does NOT close Chrome)
+      if (this.browser) {
+        await this.browser.close().catch(() => {});
+        this.browser = null;
         this.context = null;
       }
+
+      // Now kill the Chrome process
+      if (this.chromeProcess) {
+        this.chromeProcess.kill("SIGTERM");
+        // Give it 2 seconds to close gracefully, then force kill
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        if (this.chromeProcess && !this.chromeProcess.killed) {
+          this.chromeProcess.kill("SIGKILL");
+        }
+        this.chromeProcess = null;
+      }
+
       logger.info("Browser shut down");
     } catch {
       // Suppress errors during shutdown — browser may already be disposed
       logger.warn("Browser shutdown completed with warnings");
     }
-  }
-
-  private getRandomUserAgent(): string {
-    const userAgents = [
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0",
-      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-    ];
-    return userAgents[Math.floor(Math.random() * userAgents.length)];
   }
 }
