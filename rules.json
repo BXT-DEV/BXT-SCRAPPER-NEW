@@ -1,0 +1,70 @@
+{
+  "MAPPING REFURBISHED": {
+    "skuMappings": {
+      "Pristine": "-VR-ASN-AU",
+      "Excellent": "-RD-VR-EXD-AU",
+      "Very Good": "-VGC-AU"
+    },
+    "stores": {
+      "reebelo": {
+        "conditionMapping": {
+          "Pristine": ["Premium", "Pristine"],
+          "Excellent": ["Excellent"]
+        },
+        "batteryPolicy": "Standard Only",
+        "simPolicy": "Physical Only"
+      },
+      "backmarket": {
+        "conditionMapping": {
+          "Pristine": ["Excellent"],
+          "Excellent": ["Good"]
+        },
+        "simPolicy": "Physical Only"
+      },
+      "amazon": {
+        "conditionMapping": {
+          "Excellent": ["Excellent", "Renewed"]
+        },
+        "excludePristine": true,
+        "excludeVeryGood": true,
+        "rejectBonusAccessories": true,
+        "rejectAustralianVersion": true,
+        "rejectPreOrder": true,
+        "maxWarrantyMonths": 6
+      }
+    }
+  },
+  "MAPPING BRAND NEW": {
+    "stores": {
+      "amazon": {
+        "rejectBonusAccessories": true,
+        "rejectAustralianVersion": true,
+        "rejectPreOrder": true,
+        "rejectConditionLabels": true,
+        "maxWarrantyYears": 1
+      }
+    }
+  },
+  "MAPPING BRAND NEW Laptop": {
+    "stores": {
+      "amazon": {
+        "rejectBonusAccessories": true,
+        "rejectAustralianVersion": true,
+        "rejectPreOrder": true,
+        "rejectConditionLabels": true,
+        "maxWarrantyYears": 1
+      }
+    }
+  },
+  "MAPPING BRAND NEW Lens dan Camera": {
+    "stores": {
+      "amazon": {
+        "rejectBonusAccessories": true,
+        "rejectAustralianVersion": true,
+        "rejectPreOrder": true,
+        "rejectConditionLabels": true,
+        "maxWarrantyYears": 1
+      }
+    }
+  }
+}
