@@ -7,6 +7,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { getScraperStatus } from './utils/status-manager.js';
 import { loadRules, saveRules } from './utils/rules-manager.js';
+import { getCostStats } from './utils/cost-tracker.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -238,6 +239,10 @@ const server = http.createServer(async (req, res) => {
     if (method === 'POST' && url === '/api/rules') return await handlePostRules(req, res);
     if (method === 'POST' && url === '/api/upload-csv') return await handleUploadCsv(req, res);
     if (method === 'GET' && url === '/api/output-files') return await handleGetOutputFiles(res);
+    if (method === 'GET' && url === '/api/cost-stats') {
+      const stats = await getCostStats();
+      return jsonResponse(res, stats);
+    }
 
     if (method === 'GET' && url === '/api/scraper-status') {
       return jsonResponse(res, {

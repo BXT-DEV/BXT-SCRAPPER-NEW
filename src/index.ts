@@ -165,7 +165,7 @@ async function waitForNewGeminiKeys(matcherService: GeminiMatcherService, curren
 
   while (true) {
     await sleep(10000); // Check every 10 seconds
-    const newKeys = reloadGeminiKeys();
+    const newKeys = reloadGeminiKeys(config.scraperTarget);
     
     // Check if there are any keys not in the old set
     const hasNewKeys = newKeys.some(k => !oldKeysSet.has(k));
@@ -249,7 +249,7 @@ async function processSingleProduct(
   let cleanUrl = matchedResult.url.split("?")[0];
 
   if ("selectVariantsAndGetPrice" in searchService) {
-    const result = await (searchService as any).selectVariantsAndGetPrice(page, product);
+    const result = await (searchService as any).selectVariantsAndGetPrice(page, product, matchedResult.url);
     price = result.price;
     cleanUrl = result.cleanUrl;
   } else {

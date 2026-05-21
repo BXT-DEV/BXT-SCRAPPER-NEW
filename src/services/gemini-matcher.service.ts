@@ -8,6 +8,7 @@ import { GoogleGenAI } from "@google/genai";
 import type { BecexProduct, AmazonSearchResult, GeminiMatchResult, ScraperTarget, MappingCategory } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { loadRules } from "../utils/rules-manager.js";
+import { recordCost } from "../utils/cost-tracker.js";
 
 // ── Store-specific rules (from rules.json) ───────────
 function buildStoreRules(scraperTarget: ScraperTarget, mappingCategory: MappingCategory): string {
@@ -269,6 +270,15 @@ export class GeminiMatcherService {
             maxOutputTokens: 1000
           }
         });
+        
+        if (response.usageMetadata) {
+          const promptTokens = response.usageMetadata.promptTokenCount || 0;
+          const candidateTokens = response.usageMetadata.candidatesTokenCount || 0;
+          // Record asynchronously without awaiting
+          recordCost(this.scraperTarget, promptTokens, candidateTokens).catch(e => 
+            logger.warn(`Failed to record cost: ${e.message}`)
+          );
+        }
 
         const text = response.text || "";
         const match = this.parseGeminiResponse(text, searchResults.length);

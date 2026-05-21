@@ -326,6 +326,7 @@
         <div class="tabs">
             <button class="tab-btn active" id="config-tab-btn" onclick="switchTab('config-tab')">⚙️ Configuration</button>
             <button class="tab-btn" id="rules-tab-btn" onclick="switchTab('rules-tab')">📊 Mapping Rules</button>
+            <button class="tab-btn" id="cost-tab-btn" onclick="switchTab('cost-tab')">💰 API Cost Tracking</button>
         </div>
 
         <div id="config-tab" class="tab-content active">
@@ -409,6 +410,20 @@
                 </form>
             </div>
         </div>
+
+        <!-- Cost Tracking Tab -->
+        <div id="cost-tab" class="tab-content">
+            <div class="card">
+                <div class="card-title"><span class="icon">💰</span> API Cost Tracking</div>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                    Monitor Gemini API token usage and estimated cost per competitor.
+                </p>
+                <div class="output-list" id="costList">
+                    <div class="empty-state">Loading cost data...</div>
+                </div>
+            </div>
+        </div>
+
     </div> <!-- End of container -->
 
     <!-- API Key Exhausted Modal -->
@@ -841,6 +856,8 @@
 
         if (tabId === 'rules-tab') {
             loadRules();
+        } else if (tabId === 'cost-tab') {
+            loadCostStats();
         }
     };
 
@@ -1077,6 +1094,70 @@
         e.preventDefault();
         await saveRulesFromUI();
     });
+
+    // === Cost Stats Logic ===
+    async function loadCostStats() {
+        const container = document.getElementById("costList");
+        try {
+            const res = await fetch("/api/cost-stats");
+            const stats = await res.json();
+            
+            if (!stats || stats.length === 0) {
+                container.innerHTML = '<div class="empty-state">No cost data available yet. Run the scraper first!</div>';
+                return;
+            }
+            
+            container.innerHTML = "";
+            let totalOverallCost = 0;
+            
+            stats.forEach(stat => {
+                totalOverallCost += stat.estimatedCostUSD;
+                
+                const item = document.createElement("div");
+                item.className = "output-item";
+                item.style.display = "block";
+                
+                item.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: center;">
+                        <div style="font-weight: 600; font-size: 1.1rem; color: var(--purple); text-transform: uppercase;">
+                            🎯 ${stat.target}
+                        </div>
+                        <div style="font-weight: 700; color: var(--success); font-size: 1.1rem;">
+                            $${stat.estimatedCostUSD.toFixed(4)}
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted);">
+                        <div>Total Requests: <span style="color: white;">${stat.totalRequests}</span></div>
+                        <div>Prompt Tokens: <span style="color: white;">${stat.totalPromptTokens.toLocaleString()}</span></div>
+                        <div>Candidate Tokens: <span style="color: white;">${stat.totalCandidateTokens.toLocaleString()}</span></div>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+            
+            // Add Total summary
+            const summaryItem = document.createElement("div");
+            summaryItem.className = "output-item";
+            summaryItem.style.background = "rgba(139, 92, 246, 0.1)";
+            summaryItem.style.border = "1px solid rgba(139, 92, 246, 0.3)";
+            summaryItem.style.marginTop = "1rem";
+            
+            summaryItem.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-weight: 700; font-size: 1.2rem; color: white;">
+                        Total Overall Cost
+                    </div>
+                    <div style="font-weight: 700; color: #fbbf24; font-size: 1.2rem;">
+                        $${totalOverallCost.toFixed(4)}
+                    </div>
+                </div>
+            `;
+            container.appendChild(summaryItem);
+            
+        } catch (err) {
+            container.innerHTML = '<div class="empty-state">Failed to load cost statistics.</div>';
+        }
+    }
 </script>
 </body>
 </html>

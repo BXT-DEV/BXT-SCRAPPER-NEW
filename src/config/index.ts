@@ -76,8 +76,17 @@ function validateCategoryTargetPair(category: MappingCategory, target: ScraperTa
   }
 }
 
-function loadGeminiApiKeys(): string[] {
+function loadGeminiApiKeys(scraperTarget?: string): string[] {
   const keys: string[] = [];
+  
+  // Prioritize target-specific key if provided
+  if (scraperTarget) {
+    const targetKey = process.env[`GEMINI_API_KEY_${scraperTarget.toUpperCase()}`];
+    if (targetKey && targetKey.trim() && targetKey !== "your_gemini_api_key_here") {
+      keys.push(targetKey.trim());
+    }
+  }
+
   // Primary key
   const primary = process.env.GEMINI_API_KEY;
   if (primary && primary !== "your_gemini_api_key_here") {
@@ -94,18 +103,18 @@ function loadGeminiApiKeys(): string[] {
 }
 
 function loadConfig(): AppConfig {
-  const geminiApiKeys = loadGeminiApiKeys();
-  if (geminiApiKeys.length === 0) {
-    throw new Error(
-      "GEMINI_API_KEY is required. Set it in .env file."
-    );
-  }
-
   const isDryRun = process.argv.includes("--dry-run");
 
   const mappingCategory = (process.env.MAPPING_CATEGORY as MappingCategory) || "MAPPING BRAND NEW";
   const scraperTarget = (process.env.SCRAPER_TARGET as ScraperTarget) || "amazon";
   const scraperMode = (process.env.SCRAPER_MODE as ScraperMode) || "fresh";
+
+  const geminiApiKeys = loadGeminiApiKeys(scraperTarget);
+  if (geminiApiKeys.length === 0) {
+    throw new Error(
+      "GEMINI_API_KEY is required. Set it in .env file."
+    );
+  }
 
   // Validate category ↔ target combination
   validateCategoryTargetPair(mappingCategory, scraperTarget);
@@ -148,14 +157,14 @@ function loadConfig(): AppConfig {
   };
 }
 
-export function reloadGeminiKeys(): string[] {
+export function reloadGeminiKeys(scraperTarget?: string): string[] {
   // Clear existing env vars to ensure we read the latest from file
   const PROJECT_ROOT = (process as any).pkg !== undefined 
     ? process.cwd() 
     : path.resolve(fileURLToPath(import.meta.url), "../../..");
   
   dotenv.config({ path: path.join(PROJECT_ROOT, ".env"), override: true });
-  return loadGeminiApiKeys();
+  return loadGeminiApiKeys(scraperTarget);
 }
 
 export const config = loadConfig();

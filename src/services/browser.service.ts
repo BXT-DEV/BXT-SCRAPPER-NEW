@@ -8,6 +8,7 @@
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import path from "path";
 import fs from "fs";
+import os from "os";
 import { exec, spawn, type ChildProcess } from "child_process";
 import { promisify } from "util";
 import { logger } from "../utils/logger.js";
@@ -110,6 +111,7 @@ export class BrowserService {
   private context: BrowserContext | null = null;
   private chromeProcess: ChildProcess | null = null;
   private readonly proxyUrl: string | null;
+  private userDataDir: string | null = null;
 
   constructor(proxyUrl: string | null) {
     this.proxyUrl = proxyUrl;
@@ -121,6 +123,9 @@ export class BrowserService {
 
     const chromePath = getChromePath();
     logger.info(`Found Chrome at: ${chromePath}`);
+
+    // Create a temporary user data dir to avoid cluttering project
+    this.userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "scraper-chrome-"));
 
     // Build Chrome launch arguments
     const chromeArgs = this.buildChromeArgs(chromePath);
@@ -182,7 +187,7 @@ export class BrowserService {
    * Build Chrome command-line arguments for Guest mode + CDP.
    */
   private buildChromeArgs(chromePath: string): string[] {
-    const userDataDir = config.chromeUserDataDir;
+    const userDataDir = this.userDataDir || config.chromeUserDataDir;
     const args: string[] = [
       `--remote-debugging-port=${CDP_PORT}`,
       `--user-data-dir=${userDataDir}`,
@@ -247,6 +252,16 @@ export class BrowserService {
           this.chromeProcess.kill("SIGKILL");
         }
         this.chromeProcess = null;
+      }
+
+      // Cleanup temp user data dir
+      if (this.userDataDir && fs.existsSync(this.userDataDir)) {
+        try {
+          fs.rmSync(this.userDataDir, { recursive: true, force: true });
+        } catch (err) {
+          logger.warn(`Failed to clean up temp user data dir: ${(err as Error).message}`);
+        }
+        this.userDataDir = null;
       }
 
       logger.info("Browser shut down");

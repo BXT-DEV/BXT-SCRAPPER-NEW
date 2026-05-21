@@ -285,24 +285,72 @@ export class BackmarketSearchService {
   private async extractSearchResults(page: Page): Promise<AmazonSearchResult[]> {
     const startTime = Date.now();
     const handle = await page.waitForFunction(({ max, start }) => {
-      const cardSelectors = 'a[data-qa="product-thumb"], [data-test="product-card"] a, .productCard a, a.productCard, a[href*="/en-au/p/"]';
-      const cards = document.querySelectorAll(cardSelectors);
+      // Try to find product card containers first
+      const containerSelectors = [
+        '[data-test="product-card"]',
+        '[data-qa="productCard"]',
+        'article',
+        '.productCard'
+      ];
+      
+      let cards: Element[] = [];
+      for (const sel of containerSelectors) {
+        const found = document.querySelectorAll(sel);
+        if (found.length > 0) {
+          cards = Array.from(found);
+          break;
+        }
+      }
+
+      // Fallback to searching anchors directly if no containers found
+      if (cards.length === 0) {
+        const anchorSelectors = [
+          'a[data-qa="product-thumb"]',
+          '[data-test="product-card"] a',
+          '.productCard a',
+          'a.productCard',
+          'a[href*="/en-au/p/"]',
+          'a[href*="/p/"]'
+        ];
+        for (const sel of anchorSelectors) {
+          const found = document.querySelectorAll(sel);
+          if (found.length > 0) {
+            cards = Array.from(found);
+            break;
+          }
+        }
+      }
 
       if (cards.length > 0) {
         const items: any[] = [];
-        for (const card of Array.from(cards).slice(0, max)) {
-          const titleEl = card.querySelector('h2, .productTitle, [data-qa="product-title"]');
-          const priceEl = card.querySelector('[data-qa="price"]');
-          if (!titleEl) continue;
-
-          const title = titleEl.textContent?.trim() || "";
-          const rawUrl = card.getAttribute('href') || "";
+        for (const card of cards.slice(0, max)) {
+          // 1. Get the link (href)
+          let linkEl = card.tagName === 'A' ? card : card.querySelector('a[href*="/p/"], a[href*="/en-au/p/"], a');
+          const rawUrl = linkEl ? linkEl.getAttribute('href') || "" : "";
+          if (!rawUrl) continue;
           const url = rawUrl.startsWith('http') ? rawUrl : `https://${window.location.host}${rawUrl}`;
 
+          // 2. Get the title
+          let titleEl = card.querySelector('[data-test="product-title"], [data-qa="product-title"], h3, h2, .productTitle');
+          if (!titleEl && linkEl) {
+            titleEl = linkEl.querySelector('[data-test="product-title"], [data-qa="product-title"]') || linkEl;
+          }
+          const title = titleEl ? titleEl.textContent?.trim() || "" : "";
+          if (!title) continue;
+
+          // 3. Get the price
+          let priceEl = card.querySelector('[data-qa="productCardPrice"], [data-qa="price"], [data-test="price"], [class*="price"]');
           let price = null;
           if (priceEl) {
             const match = priceEl.textContent?.replace(/[^0-9.]/g, "");
             if (match) price = parseFloat(match);
+          } else {
+            // Fallback: search text content of the card for a price match (e.g. $1,018.00)
+            const cardText = card.textContent || "";
+            const priceMatch = cardText.match(/A?\$([0-9,]+\.[0-9]{2})/);
+            if (priceMatch) {
+              price = parseFloat(priceMatch[1].replace(/,/g, ""));
+            }
           }
           items.push({ title, price, url, rating: null, reviewCount: null, isPrime: false });
         }
@@ -310,7 +358,6 @@ export class BackmarketSearchService {
       }
 
       // Only treat "no results" messages after at least 5 seconds of waiting
-      // (gives time for legitimate results to render via JS)
       const elapsed = Date.now() - start;
       if (elapsed > 5000) {
         const bodyText = document.body.innerText;
@@ -405,9 +452,65 @@ export class BackmarketSearchService {
     }
   }
 
-  async selectVariantsAndGetPrice(page: Page, product: BecexProduct): Promise<{price: number | null, cleanUrl: string}> {
+  async selectVariantsAndGetPrice(page: Page, product: BecexProduct, matchedUrl?: string): Promise<{price: number | null, cleanUrl: string}> {
     logger.info(`Selecting Backmarket variants for: ${product.productName}`);
     await randomDelay(2000, 3000);
+
+    // ── Handle Country Redirect / Selection Modal ──
+    let currentUrl = page.url();
+    if (!currentUrl.includes('/p/') && matchedUrl) {
+      logger.warn(`Redirect detected (currently at: ${currentUrl}). Handling location modal...`);
+      await page.evaluate(() => {
+        // Find close button
+        const btns = Array.from(document.querySelectorAll('button'));
+        const closeBtn = btns.find(b => {
+          const txt = b.textContent?.trim() || "";
+          return txt === '✕' || txt.includes('✕') || b.className.includes('close');
+        });
+        if (closeBtn) {
+          closeBtn.click();
+        }
+        // Try clicking "Australia"
+        const spans = Array.from(document.querySelectorAll('span, button, a'));
+        const ausEl = spans.find(s => s.textContent?.trim() === 'Australia');
+        if (ausEl) (ausEl as HTMLElement).click();
+      });
+      await randomDelay(3000, 4000);
+
+      // Re-navigate to the product page now that the cookie is set
+      logger.info(`Navigating back to detail page: ${matchedUrl}`);
+      await page.goto(matchedUrl, { waitUntil: "domcontentloaded", timeout: 30000 }).catch(() => {});
+      await randomDelay(2000, 3000);
+      currentUrl = page.url();
+    }
+
+    // Dismiss Cookie consent
+    await this.dismissCookieConsent(page);
+
+    // Dismiss location modal if it is visible on the product page itself
+    const hasModalOnProductPage = await page.evaluate(() => {
+      return document.body.innerText.includes("Choose location") || 
+             document.body.innerText.includes("Choose country") ||
+             !!document.querySelector('button:has-text("Australia"), span:has-text("Australia")');
+    });
+    if (hasModalOnProductPage) {
+      logger.info("Location selector modal visible on product page. Dismissing...");
+      await page.evaluate(() => {
+        const btns = Array.from(document.querySelectorAll('button'));
+        const closeBtn = btns.find(b => {
+          const txt = b.textContent?.trim() || "";
+          return txt === '✕' || txt.includes('✕') || b.className.includes('close');
+        });
+        if (closeBtn) {
+          closeBtn.click();
+        } else {
+          const spans = Array.from(document.querySelectorAll('span, button, a'));
+          const ausEl = spans.find(s => s.textContent?.trim() === 'Australia');
+          if (ausEl) (ausEl as HTMLElement).click();
+        }
+      });
+      await randomDelay(2000, 3000);
+    }
 
     const rulesConfig = loadRules();
     const catRules = rulesConfig["MAPPING REFURBISHED"];
@@ -459,7 +562,12 @@ export class BackmarketSearchService {
     await randomDelay(1000, 2000);
 
     const price = await page.evaluate(() => {
-      const priceSelectors = ['[data-qa="price"]', '.price'];
+      const priceSelectors = [
+        '[data-qa="productpage-product-price"]',
+        '[data-test="productpage-product-price"]',
+        '[data-qa="price"]',
+        '.price',
+      ];
       for (const sel of priceSelectors) {
         const el = document.querySelector(sel);
         if (el) {
