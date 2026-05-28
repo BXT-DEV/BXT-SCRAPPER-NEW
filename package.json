@@ -11,6 +11,7 @@
     "scrape": "tsx src/index.ts",
     "scrape:dry-run": "tsx src/index.ts --dry-run",
     "config": "tsx src/config-ui.ts",
+    "credentials": "tsx src/scripts/manage-credentials.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "package": "pkg . --targets node18-win-x64,node18-macos-x64 --out-path bin"
@@ -24,6 +25,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.0.0",
+    "better-sqlite3": "^12.10.0",
     "csv-parser": "^3.0.0",
     "csv-writer": "^1.6.0",
     "dotenv": "^16.4.7",
@@ -35,6 +37,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.0.0",
     "pkg": "^5.8.1",
     "tsx": "^4.19.0",

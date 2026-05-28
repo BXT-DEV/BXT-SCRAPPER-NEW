@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import type { ScraperTarget, ScraperMode, MappingCategory } from "../types/index.js";
+import { hasCredentialsFile, loadCredentials, promptPasswordSync } from "../utils/credentials-manager.js";
 
 // ── Valid scraper targets per mapping category ─────────────
 // Enforced from "Note untuk scrapping mapping.md"
@@ -28,6 +29,30 @@ const PROJECT_ROOT = isPackaged
   : path.resolve(__dirname, "../..");
 
 dotenv.config({ path: path.join(PROJECT_ROOT, ".env") });
+
+let cachedPassword = "";
+
+// Decrypt and load credentials if the encrypted file exists
+if (hasCredentialsFile()) {
+  let decrypted = false;
+  while (!decrypted) {
+    const pass = promptPasswordSync("Enter credentials decryption password: ");
+    try {
+      const creds = loadCredentials(pass);
+      for (const [k, v] of Object.entries(creds)) {
+        process.env[k] = v;
+      }
+      cachedPassword = pass;
+      decrypted = true;
+    } catch (err) {
+      console.error("❌ Incorrect decryption password. Try again.");
+      if (process.env.CREDENTIAL_PASSPHRASE) {
+        console.error("Fatal: CREDENTIAL_PASSPHRASE env var is invalid.");
+        process.exit(1);
+      }
+    }
+  }
+}
 
 interface AppConfig {
   mappingCategory: MappingCategory;
@@ -164,6 +189,18 @@ export function reloadGeminiKeys(scraperTarget?: string): string[] {
     : path.resolve(fileURLToPath(import.meta.url), "../../..");
   
   dotenv.config({ path: path.join(PROJECT_ROOT, ".env"), override: true });
+
+  if (hasCredentialsFile() && cachedPassword) {
+    try {
+      const creds = loadCredentials(cachedPassword);
+      for (const [k, v] of Object.entries(creds)) {
+        process.env[k] = v;
+      }
+    } catch {
+      // Ignore reload errors
+    }
+  }
+
   return loadGeminiApiKeys(scraperTarget);
 }
 

@@ -37,7 +37,7 @@
             "Renewed"
           ]
         },
-        "excludePristine": false,
+        "excludePristine": true,
         "excludeVeryGood": true,
         "rejectBonusAccessories": true,
         "rejectAustralianVersion": true,

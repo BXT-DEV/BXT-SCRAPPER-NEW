@@ -136,6 +136,11 @@ dist
 .pnp.*
 /debug
 .env
+credentials.json.enc
+credentials.db
+credentials.db-journal
+credentials.db-shm
+credentials.db-wal
 /chrome-data/Default/Cache
 /chrome-data/Default/Code Cache
 /chrome-data/GraphiteDawnCache
