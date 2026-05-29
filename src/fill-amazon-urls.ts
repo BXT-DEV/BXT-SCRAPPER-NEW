@@ -112,7 +112,12 @@ async function main() {
         const searchResults = await searchService.searchProduct(page, searchQuery);
 
         if (searchResults.length > 0) {
-          const screenshot = await page.screenshot({ fullPage: false });
+          let screenshot: Buffer | undefined;
+          try {
+            screenshot = await page.screenshot({ fullPage: false, timeout: 5000 });
+          } catch (screenshotError) {
+            logger.warn(`⚠️ Warning: page.screenshot failed or timed out: ${(screenshotError as Error).message}. Proceeding with text-only matching fallback.`);
+          }
           const productObj = { sku, productName };
           const matchResult = await matcherService.findBestMatch(productObj, searchResults, screenshot);
 

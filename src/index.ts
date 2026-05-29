@@ -231,7 +231,12 @@ async function processSingleProduct(
   }
 
   // Step 2: Take screenshot and use AI matching
-  const screenshot = await page.screenshot({ fullPage: false });
+  let screenshot: Buffer | undefined;
+  try {
+    screenshot = await page.screenshot({ fullPage: false, timeout: 5000 });
+  } catch (screenshotError) {
+    logger.warn(`⚠️ Warning: page.screenshot failed or timed out: ${(screenshotError as Error).message}. Proceeding with text-only matching fallback.`);
+  }
   const matchResult = await matcherService.findBestMatch(product, searchResults, screenshot);
 
   if (!matchResult.isMatch || matchResult.matchedResultIndex < 0) {
