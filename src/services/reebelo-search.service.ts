@@ -124,24 +124,24 @@ export class ReebeloSearchService {
 
     // 1. Condition selection
     if (isPristine && storeRules?.conditionMapping?.Pristine) {
-      await this.clickVariantByText(page, storeRules.conditionMapping.Pristine);
+      await this.clickOrThrow(page, storeRules.conditionMapping.Pristine, "Condition: Pristine");
     } else if (isExcellent && storeRules?.conditionMapping?.Excellent) {
-      await this.clickVariantByText(page, storeRules.conditionMapping.Excellent);
+      await this.clickOrThrow(page, storeRules.conditionMapping.Excellent, "Condition: Excellent");
     }
 
     // 2. Storage selection
     if (specs.storage.length > 0) {
-      await this.clickVariantByText(page, specs.storage);
+      await this.clickOrThrow(page, specs.storage, "Storage");
     }
 
     // 3. Color selection
     if (specs.colors.length > 0) {
-      await this.clickVariantByText(page, specs.colors);
+      await this.clickOrThrow(page, specs.colors, "Color");
     }
 
     // 4. Connectivity selection
     if (specs.connectivity.length > 0) {
-      await this.clickVariantByText(page, specs.connectivity);
+      await this.clickOrThrow(page, specs.connectivity, "Connectivity");
     }
 
     // 5. Battery selection
@@ -197,6 +197,13 @@ export class ReebeloSearchService {
     return { price, cleanUrl: page.url() };
   }
 
+  private async clickOrThrow(page: Page, texts: string[], variantName: string): Promise<void> {
+    const success = await this.clickVariantByText(page, texts);
+    if (!success) {
+      throw new Error(`REQUIRED_VARIANT_NOT_FOUND: ${variantName} (${texts.join(", ")})`);
+    }
+  }
+
   private async clickVariantByText(page: Page, texts: string[]): Promise<boolean> {
     try {
       const buttons = await page.$$('button, div[role="button"], label, span');
@@ -205,7 +212,8 @@ export class ReebeloSearchService {
         if (text && texts.some(t => text.toLowerCase() === t.toLowerCase() || (text.toLowerCase().includes(t.toLowerCase()) && text.length < 30))) {
           // Check if it's actually clickable or already selected
           const isVisible = await btn.isVisible();
-          if (isVisible) {
+          const isEnabled = await btn.isEnabled();
+          if (isVisible && isEnabled) {
             await btn.click({ force: true }).catch(() => {});
             await randomDelay(500, 1000);
             return true;
@@ -218,4 +226,5 @@ export class ReebeloSearchService {
       return false;
     }
   }
+
 }

@@ -314,7 +314,7 @@ async function main(): Promise<void> {
   logger.info(`  Active Rd: Round ${activeRound}`);
   logger.info("═══════════════════════════════════════════");
 
-  const pendingProducts = products.filter(p => !completedSkus.has(p.sku)).slice(0, 50);
+  const pendingProducts = products.filter(p => !completedSkus.has(p.sku));
 
   if (pendingProducts.length === 0) {
     logger.info("Nothing to do.");
