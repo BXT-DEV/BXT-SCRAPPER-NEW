@@ -489,9 +489,13 @@ export class BackmarketSearchService {
 
     // Dismiss location modal if it is visible on the product page itself
     const hasModalOnProductPage = await page.evaluate(() => {
-      return document.body.innerText.includes("Choose location") || 
-             document.body.innerText.includes("Choose country") ||
-             !!document.querySelector('button:has-text("Australia"), span:has-text("Australia")');
+      const allText = document.body.innerText;
+      const elements = Array.from(document.querySelectorAll('button, span, a'));
+      const hasAustralia = elements.some(el => el.textContent?.trim() === "Australia");
+      
+      return allText.includes("Choose location") || 
+             allText.includes("Choose country") ||
+             hasAustralia;
     });
     if (hasModalOnProductPage) {
       logger.info("Location selector modal visible on product page. Dismissing...");
@@ -504,8 +508,8 @@ export class BackmarketSearchService {
         if (closeBtn) {
           closeBtn.click();
         } else {
-          const spans = Array.from(document.querySelectorAll('span, button, a'));
-          const ausEl = spans.find(s => s.textContent?.trim() === 'Australia');
+          const elements = Array.from(document.querySelectorAll('button, span, a'));
+          const ausEl = elements.find(s => s.textContent?.trim() === 'Australia');
           if (ausEl) (ausEl as HTMLElement).click();
         }
       });
