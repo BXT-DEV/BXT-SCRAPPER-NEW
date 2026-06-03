@@ -221,11 +221,8 @@ export class BrowserService {
         logger.info("Checking for running Chrome instances (Mac)...");
         // Kill any Chrome with our CDP port
         await execAsync(`lsof -ti :${CDP_PORT} | xargs kill -9 2>/dev/null`).catch(() => {});
-        // Also kill any lingering Chrome processes
-        await execAsync("pkill -f 'Google Chrome.*--remote-debugging-port' 2>/dev/null").catch(() => {});
       } else if (platform === "win32") {
-        logger.info("Checking for running Chrome instances (Windows)...");
-        await execAsync("taskkill /F /IM chrome.exe /T 2>nul").catch(() => {});
+        logger.info("Checking for running Chrome instances (Windows)... skipping to protect user sessions.");
       }
       // Give it a moment to release file locks
       await new Promise((resolve) => setTimeout(resolve, 1500));
