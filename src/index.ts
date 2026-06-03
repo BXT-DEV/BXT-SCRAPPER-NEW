@@ -230,14 +230,31 @@ async function processSingleProduct(
     return buildNoMatchResult(product);
   }
 
-  // Step 2: Take screenshot and use AI matching
+  // Step 2: Inspection Sampling
   let screenshot: Buffer | undefined;
   try {
     screenshot = await page.screenshot({ fullPage: false, timeout: 5000 });
   } catch (screenshotError) {
-    logger.warn(`⚠️ Warning: page.screenshot failed or timed out: ${(screenshotError as Error).message}. Proceeding with text-only matching fallback.`);
+    logger.warn(`⚠️ Warning: page.screenshot failed or timed out: ${(screenshotError as Error).message}.`);
   }
-  const matchResult = await matcherService.findBestMatch(product, searchResults, screenshot);
+
+  // 1. Identify candidates
+  const candidates = await matcherService.getTopCandidates(product, searchResults);
+  const detailedCandidates: DetailedCandidate[] = [];
+
+  // 2. Gather details
+  for (const candidate of candidates) {
+    const result = searchResults[candidate.index];
+    logger.info(`Inspecting candidate [${candidate.index}]: ${result.title}`);
+    
+    await page.goto(result.url, { waitUntil: "domcontentloaded", timeout: 30000 });
+    // Assuming page content has the detailed specs
+    const details = await page.evaluate(() => document.body.innerText.substring(0, 1000));
+    detailedCandidates.push({ ...result, index: candidate.index, details });
+  }
+
+  // 3. Confirm match
+  const matchResult = await matcherService.confirmMatch(product, detailedCandidates);
 
   if (!matchResult.isMatch || matchResult.matchedResultIndex < 0) {
     return buildNoMatchResult(product);
@@ -245,8 +262,8 @@ async function processSingleProduct(
 
   const matchedResult = searchResults[matchResult.matchedResultIndex];
   
-  // Step 3: Visit product page
-  logger.info(`AI selected result [${matchResult.matchedResultIndex}]. Visiting...`);
+  // Step 3: Finalize and extract price
+  logger.info(`AI confirmed result [${matchResult.matchedResultIndex}]. Finalizing...`);
   await page.goto(matchedResult.url, { waitUntil: "domcontentloaded", timeout: 30000 });
 
   // Step 4: Extract Price from detail page

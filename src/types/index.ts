@@ -22,6 +22,16 @@ export interface AmazonSearchResult {
   isPrime: boolean;
 }
 
+export interface Candidate {
+  index: number;
+  reason: string;
+}
+
+export interface DetailedCandidate extends AmazonSearchResult {
+  index: number;
+  details: string; // Extracted page text or spec summary
+}
+
 export interface GeminiMatchResult {
   isMatch: boolean;
   confidence: number;

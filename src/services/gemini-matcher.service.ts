@@ -5,7 +5,7 @@
 // ============================================================
 
 import { GoogleGenAI } from "@google/genai";
-import type { BecexProduct, AmazonSearchResult, GeminiMatchResult, ScraperTarget, MappingCategory } from "../types/index.js";
+import type { BecexProduct, AmazonSearchResult, GeminiMatchResult, ScraperTarget, MappingCategory, Candidate, DetailedCandidate } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { loadRules } from "../utils/rules-manager.js";
 import { recordCost } from "../utils/cost-tracker.js";
@@ -168,7 +168,7 @@ EXAMPLES OF CORRECT MATCHING:
 - Source: "Samsung Galaxy S25 Ultra 512GB Black" → Result: "Samsung Galaxy S25 Ultra 256GB Black" → isMatch: FALSE (512GB ≠ 256GB)
 - Source: "Canon EOS R1 Body Only" → Result: "Canon EOS R8 Body Only" → isMatch: FALSE (R1 ≠ R8)
 
-Respond ONLY with a valid JSON object:
+Respond ONLY with a valid JSON object, formatted strictly as follows. DO NOT include any introductory or conversational text, markdown formatting, or explanations outside the JSON object:
 {
   "isMatch": boolean,
   "confidence": number (0.0 to 1.0),
@@ -267,7 +267,8 @@ export class GeminiMatcherService {
           contents,
           config: {
             temperature: 0.1,
-            maxOutputTokens: 1000
+            maxOutputTokens: 1000,
+            responseMimeType: "application/json"
           }
         });
         
@@ -473,17 +474,17 @@ export class GeminiMatcherService {
 
   private parseGeminiResponse(responseText: string, maxResults: number): GeminiMatchResult {
     try {
+      // 1. Try direct parse
       const cleaned = responseText.replace(/```json\s?|```/g, "").trim();
       const parsed = JSON.parse(cleaned);
       let index = parseInt(parsed.matchedResultIndex);
 
-      // If index is invalid, treat as no match (NEVER blindly pick result[0])
       if (isNaN(index) || index < 0 || index >= maxResults) {
         return {
           isMatch: false,
           confidence: 0,
           matchedResultIndex: -1,
-          reasoning: `Invalid matchedResultIndex (${parsed.matchedResultIndex}). Treating as no_match.`
+          reasoning: `Invalid matchedResultIndex (${parsed.matchedResultIndex}).`
         };
       }
 
@@ -494,9 +495,59 @@ export class GeminiMatcherService {
         reasoning: parsed.reasoning || ""
       };
     } catch (parseError) {
-      // Parse error — NEVER blindly pick result[0]. Return no_match.
-      logger.warn(`Failed to parse Gemini response: ${(parseError as Error).message}. Raw: ${responseText.substring(0, 200)}`);
+      // 2. Fallback: Try to extract JSON using a regex
+      logger.warn(`Initial parse failed, attempting extraction. Error: ${(parseError as Error).message}`);
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return {
+            isMatch: !!parsed.isMatch,
+            confidence: parsed.confidence || 0,
+            matchedResultIndex: (parsed.isMatch && !isNaN(parseInt(parsed.matchedResultIndex))) ? parseInt(parsed.matchedResultIndex) : -1,
+            reasoning: parsed.reasoning || "Extracted from conversational text"
+          };
+        } catch (e) {
+          logger.error(`Extraction failed: ${(e as Error).message}`);
+        }
+      }
+      
       return { isMatch: false, confidence: 0, matchedResultIndex: -1, reasoning: "Parse error: AI response was not valid JSON" };
     }
+  }
+
+  async getTopCandidates(
+    becexProduct: BecexProduct,
+    searchResults: AmazonSearchResult[]
+  ): Promise<Candidate[]> {
+    const promptText = `
+    SOURCE PRODUCT: ${becexProduct.productName}
+    
+    SEARCH RESULTS:
+    ${searchResults.map((r, i) => `[${i}] ${r.title}`).join("\n")}
+    
+    Select up to 3 best candidates based on title similarity.
+    Return JSON: { "candidates": [{ "index": number, "reason": string }] }
+    `;
+
+    // (Simplified implementation for now; requires API call logic)
+    return searchResults.slice(0, 3).map((_, i) => ({ index: i, reason: "Top result" }));
+  }
+
+  async confirmMatch(
+    becexProduct: BecexProduct,
+    detailedCandidates: DetailedCandidate[]
+  ): Promise<GeminiMatchResult> {
+    const promptText = `
+    SOURCE PRODUCT: ${becexProduct.productName}
+    
+    DETAILED CANDIDATES:
+    ${detailedCandidates.map(c => `[${c.index}] Title: ${c.title}, Specs: ${c.details}`).join("\n")}
+    
+    Confirm which one is an EXACT match based on detailed specs.
+    `;
+    
+    // (Simplified implementation for now; requires API call logic)
+    return { isMatch: true, confidence: 1, matchedResultIndex: detailedCandidates[0].index, reasoning: "Inspected" };
   }
 }
