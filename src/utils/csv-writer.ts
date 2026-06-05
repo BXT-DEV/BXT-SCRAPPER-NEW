@@ -225,7 +225,7 @@ export async function appendResultRow(
 
     // Retry mechanism for rename to handle transient locks
     let renamed = false;
-    let renameRetries = 10;
+    let renameRetries = 50;
     while (!renamed && renameRetries > 0) {
       try {
         fs.renameSync(tmpPath, outputPath);
