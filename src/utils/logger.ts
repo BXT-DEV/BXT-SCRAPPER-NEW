@@ -35,18 +35,30 @@ const fileFormat = winston.format.combine(
   })
 );
 
+const createFileTransport = (filename: string, level: string = 'info') => {
+  try {
+    return new winston.transports.File({
+      filename: path.join(LOGS_DIR, filename),
+      level,
+      format: fileFormat,
+    });
+  } catch (error) {
+    console.error(`Failed to initialize file transport for ${filename}:`, error);
+    return null;
+  }
+};
+
+const transports: any[] = [
+  new winston.transports.Console({ format: consoleFormat }),
+];
+
+const fileTransport = createFileTransport(`scraper_${todayStamp}.log`);
+if (fileTransport) transports.push(fileTransport);
+
+const errorTransport = createFileTransport(`errors_${todayStamp}.log`, 'error');
+if (errorTransport) transports.push(errorTransport);
+
 export const logger = winston.createLogger({
   level: "info",
-  transports: [
-    new winston.transports.Console({ format: consoleFormat }),
-    new winston.transports.File({
-      filename: path.join(LOGS_DIR, `scraper_${todayStamp}.log`),
-      format: fileFormat,
-    }),
-    new winston.transports.File({
-      filename: path.join(LOGS_DIR, `errors_${todayStamp}.log`),
-      level: "error",
-      format: fileFormat,
-    }),
-  ],
+  transports,
 });

@@ -139,86 +139,98 @@ export async function loadCompletedSkus(
 export async function appendResultRow(
   outputPath: string,
   result: ScrapedResult,
-  activeRound?: number
+  activeRound?: number,
+  retries = -1 // -1 means infinite retries
 ): Promise<void> {
-  const fileExists = fs.existsSync(outputPath);
-  let rows: Record<string, string>[] = [];
-  if (fileExists) {
-    rows = await readExistingCsv(outputPath);
-  }
+  try {
+    const fileExists = fs.existsSync(outputPath);
+    let rows: Record<string, string>[] = [];
+    if (fileExists) {
+      rows = await readExistingCsv(outputPath);
+    }
 
-  const round = activeRound ?? getActiveRound(rows);
+    const round = activeRound ?? getActiveRound(rows);
 
-  let existingRow = rows.find(
-    (r) => (r["SKU"] || "").trim().toLowerCase() === result.sku.trim().toLowerCase()
-  );
+    let existingRow = rows.find(
+      (r) => (r["SKU"] || "").trim().toLowerCase() === result.sku.trim().toLowerCase()
+    );
 
-  const cleanPrice = result.amazonPrice !== null ? result.amazonPrice.toString() : "";
+    const cleanPrice = result.amazonPrice !== null ? result.amazonPrice.toString() : "";
 
-  if (existingRow) {
-    existingRow["Product Name"] = result.productName;
-    existingRow["link"] = result.amazonUrl;
-    existingRow[`link_round${round}`] = result.amazonUrl;
-    existingRow["amazon_price"] = cleanPrice;
-    existingRow["amazon_title"] = result.amazonTitle;
-    existingRow["match_confidence"] = result.matchConfidence.toString();
-    existingRow["status"] = result.status;
-    existingRow["error_message"] = result.errorMessage;
-  } else {
-    const newRow: Record<string, string> = {
-      "SKU": result.sku,
-      "Product Name": result.productName,
-      "link": result.amazonUrl,
-      [`link_round${round}`]: result.amazonUrl,
-      "amazon_price": cleanPrice,
-      "amazon_title": result.amazonTitle,
-      "match_confidence": result.matchConfidence.toString(),
-      "status": result.status,
-      "error_message": result.errorMessage,
-    };
-    rows.push(newRow);
-  }
+    if (existingRow) {
+      existingRow["Product Name"] = result.productName;
+      existingRow["link"] = result.amazonUrl;
+      existingRow[`link_round${round}`] = result.amazonUrl;
+      existingRow["amazon_price"] = cleanPrice;
+      existingRow["amazon_title"] = result.amazonTitle;
+      existingRow["match_confidence"] = result.matchConfidence.toString();
+      existingRow["status"] = result.status;
+      existingRow["error_message"] = result.errorMessage;
+    } else {
+      const newRow: Record<string, string> = {
+        "SKU": result.sku,
+        "Product Name": result.productName,
+        "link": result.amazonUrl,
+        [`link_round${round}`]: result.amazonUrl,
+        "amazon_price": cleanPrice,
+        "amazon_title": result.amazonTitle,
+        "match_confidence": result.matchConfidence.toString(),
+        "status": result.status,
+        "error_message": result.errorMessage,
+      };
+      rows.push(newRow);
+    }
 
-  // Determine all round numbers that have columns in the rows
-  const roundNums = new Set<number>();
-  roundNums.add(round);
-  for (const r of rows) {
-    for (const key of Object.keys(r)) {
-      if (key.startsWith("link_round")) {
-        const num = parseInt(key.replace("link_round", ""), 10);
-        if (!isNaN(num) && num > 0) {
-          roundNums.add(num);
+    // Determine all round numbers that have columns in the rows
+    const roundNums = new Set<number>();
+    roundNums.add(round);
+    for (const r of rows) {
+      for (const key of Object.keys(r)) {
+        if (key.startsWith("link_round")) {
+          const num = parseInt(key.replace("link_round", ""), 10);
+          if (!isNaN(num) && num > 0) {
+            roundNums.add(num);
+          }
         }
       }
     }
-  }
 
-  const maxRound = Math.max(...roundNums);
+    const maxRound = Math.max(...roundNums);
 
-  // Compile headers
-  const headers = ["SKU", "Product Name", "link"];
-  for (let r = 1; r <= maxRound; r++) {
-    headers.push(`link_round${r}`);
-  }
-  headers.push("amazon_price", "amazon_title", "match_confidence", "status", "error_message");
-
-  const escapeField = (val: string | number | null): string => {
-    const str = String(val ?? "");
-    if (str.includes(";") || str.includes("\"") || str.includes("\n")) {
-      return `"${str.replace(/"/g, "\"\"")}"`;
+    // Compile headers
+    const headers = ["SKU", "Product Name", "link"];
+    for (let r = 1; r <= maxRound; r++) {
+      headers.push(`link_round${r}`);
     }
-    return str;
-  };
+    headers.push("amazon_price", "amazon_title", "match_confidence", "status", "error_message");
 
-  const headerLine = headers.join(";");
-  const dataLines = rows.map((r) => {
-    return headers.map((h) => escapeField(r[h])).join(";");
-  });
+    const escapeField = (val: string | number | null): string => {
+      const str = String(val ?? "");
+      if (str.includes(";") || str.includes("\"") || str.includes("\n")) {
+        return `"${str.replace(/"/g, "\"\"")}"`;
+      }
+      return str;
+    };
 
-  const csvContent = [headerLine, ...dataLines].join("\n") + "\n";
+    const headerLine = headers.join(";");
+    const dataLines = rows.map((r) => {
+      return headers.map((h) => escapeField(r[h])).join(";");
+    });
 
-  // Durability & Atomicity: Write to temporary file first, then atomically rename
-  const tmpPath = `${outputPath}.tmp`;
-  fs.writeFileSync(tmpPath, csvContent, "utf8");
-  fs.renameSync(tmpPath, outputPath);
+    const csvContent = [headerLine, ...dataLines].join("\n") + "\n";
+
+    // Durability & Atomicity: Write to temporary file first, then atomically rename
+    const tmpPath = `${outputPath}.tmp`;
+    fs.writeFileSync(tmpPath, csvContent, "utf8");
+    fs.renameSync(tmpPath, outputPath);
+  } catch (error: any) {
+    if ((error.code === 'EPERM' || error.code === 'EBUSY') && (retries === -1 || retries > 0)) {
+      const remainingMessage = retries === -1 ? "indefinitely" : `${retries} attempts left`;
+      logger.warn(`File locked (EPERM/EBUSY): ${outputPath}. Retrying in 5 seconds... (${remainingMessage})`);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      return appendResultRow(outputPath, result, activeRound, retries === -1 ? -1 : retries - 1);
+    }
+    logger.error(`Failed to write to CSV: ${error.message}`);
+    throw error;
+  }
 }
