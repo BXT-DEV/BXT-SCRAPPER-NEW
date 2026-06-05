@@ -222,7 +222,26 @@ export async function appendResultRow(
     // Durability & Atomicity: Write to temporary file first, then atomically rename
     const tmpPath = `${outputPath}.tmp`;
     fs.writeFileSync(tmpPath, csvContent, "utf8");
-    fs.renameSync(tmpPath, outputPath);
+
+    // Retry mechanism for rename to handle transient locks
+    let renamed = false;
+    let renameRetries = 10;
+    while (!renamed && renameRetries > 0) {
+      try {
+        fs.renameSync(tmpPath, outputPath);
+        renamed = true;
+      } catch (err: any) {
+        if (err.code === 'EPERM' || err.code === 'EBUSY') {
+          renameRetries--;
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        } else {
+          throw err;
+        }
+      }
+    }
+    if (!renamed) {
+      throw new Error(`Failed to rename ${tmpPath} to ${outputPath} after retries.`);
+    }
   } catch (error: any) {
     if ((error.code === 'EPERM' || error.code === 'EBUSY') && (retries === -1 || retries > 0)) {
       const remainingMessage = retries === -1 ? "indefinitely" : `${retries} attempts left`;
