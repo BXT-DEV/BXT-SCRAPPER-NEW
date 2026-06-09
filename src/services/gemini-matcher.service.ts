@@ -520,18 +520,29 @@ export class GeminiMatcherService {
     becexProduct: BecexProduct,
     searchResults: AmazonSearchResult[]
   ): Promise<Candidate[]> {
-    const promptText = `
-    SOURCE PRODUCT: ${becexProduct.productName}
+    const promptText = `You are a product matching assistant.
+SOURCE PRODUCT: ${becexProduct.productName}
     
-    SEARCH RESULTS:
-    ${searchResults.map((r, i) => `[${i}] ${r.title}`).join("\n")}
+SEARCH RESULTS:
+${searchResults.map((r, i) => `[${i}] ${r.title}`).join("\n")}
     
-    Select up to 3 best candidates based on title similarity.
-    Return JSON: { "candidates": [{ "index": number, "reason": string }] }
-    `;
+Select up to 3 best candidates based on title similarity.
+Return JSON: { "candidates": [{ "index": number, "reason": string }] }`;
 
-    // (Simplified implementation for now; requires API call logic)
-    return searchResults.slice(0, 3).map((_, i) => ({ index: i, reason: "Top result" }));
+    try {
+      const genAI = this.getGenAI();
+      const response = await genAI.models.generateContent({
+        model: process.env.GEMINI_MODEL || "gemini-2.5-flash-lite",
+        contents: [{ role: "user", parts: [{ text: promptText }] }],
+        config: { temperature: 0.1, responseMimeType: "application/json" }
+      });
+      
+      const parsed = JSON.parse(response.text || '{"candidates": []}');
+      return parsed.candidates;
+    } catch (e) {
+      logger.error(`Error in getTopCandidates: ${(e as Error).message}`);
+      return searchResults.slice(0, 3).map((_, i) => ({ index: i, reason: "Fallback (API Error)" }));
+    }
   }
 
   async confirmMatch(
@@ -545,9 +556,21 @@ export class GeminiMatcherService {
     ${detailedCandidates.map(c => `[${c.index}] Title: ${c.title}, Specs: ${c.details}`).join("\n")}
     
     Confirm which one is an EXACT match based on detailed specs.
+    Return JSON same as findBestMatch format (isMatch, confidence, matchedResultIndex, reasoning).
     `;
     
-    // (Simplified implementation for now; requires API call logic)
-    return { isMatch: true, confidence: 1, matchedResultIndex: detailedCandidates[0].index, reasoning: "Inspected" };
+    try {
+      const genAI = this.getGenAI();
+      const response = await genAI.models.generateContent({
+        model: process.env.GEMINI_MODEL || "gemini-2.5-flash-lite",
+        contents: [{ role: "user", parts: [{ text: promptText }] }],
+        config: { temperature: 0.1, responseMimeType: "application/json" }
+      });
+
+      return this.parseGeminiResponse(response.text || "", detailedCandidates.length);
+    } catch (e) {
+      logger.error(`Error in confirmMatch: ${(e as Error).message}`);
+      return { isMatch: false, confidence: 0, matchedResultIndex: -1, reasoning: "API Error in confirmMatch" };
+    }
   }
 }

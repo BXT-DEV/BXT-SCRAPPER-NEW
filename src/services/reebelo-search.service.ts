@@ -7,7 +7,7 @@ import type { Page } from "playwright";
 import type { AmazonSearchResult, BecexProduct } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { randomDelay } from "../utils/delay.js";
-import { extractSpecs } from "../utils/product-utils.js";
+import { extractSpecs, getBroadSearchQuery } from "../utils/product-utils.js";
 import { loadRules } from "../utils/rules-manager.js";
 
 export class ReebeloSearchService {
@@ -20,41 +20,8 @@ export class ReebeloSearchService {
     this.maxResults = maxResults;
   }
 
-  async searchProduct(page: Page, productQuery: string): Promise<AmazonSearchResult[]> {
-    if (!this.hasSetLocation) {
-      logger.info("Setting Reebelo location to 3175...");
-      await page.goto(`https://${this.domain}`, { waitUntil: "domcontentloaded", timeout: 30000 });
-      await randomDelay(2000, 3000);
-
-      try {
-        // Try to click location trigger
-        await page.click('img[alt="Deliver to"]', { timeout: 10000 });
-        await randomDelay(1000, 2000);
-
-        // Find input inside the modal
-        const zipInput = await page.$('input[placeholder="Enter your zipcode"]');
-        if (zipInput) {
-          await zipInput.fill('3175');
-          await randomDelay(500, 1000);
-
-          // Click Apply
-          const applyBtn = await page.evaluateHandle(() => {
-            const btns = Array.from(document.querySelectorAll('button'));
-            return btns.find(b => b.textContent?.trim().toLowerCase() === 'apply');
-          });
-          if (applyBtn && applyBtn.asElement()) {
-            await applyBtn.asElement()?.click();
-            await randomDelay(2000, 3000);
-            logger.info("Location successfully set to 3175.");
-          }
-        }
-      } catch (e) {
-        logger.warn("Could not set location, proceeding anyway...");
-      }
-      this.hasSetLocation = true;
-    }
-
-    logger.info(`Searching Reebelo for: ${productQuery}`);
+  private async performSearch(page: Page, query: string): Promise<AmazonSearchResult[]> {
+    logger.info(`Searching Reebelo for: "${query}"`);
     try {
       // Ensure we are on a page where the search bar exists
       const searchInputExists = await page.$('#e2e-searchbar-search-input');
@@ -63,27 +30,33 @@ export class ReebeloSearchService {
         await randomDelay(2000, 3000);
       }
 
-      await page.fill('#e2e-searchbar-search-input', productQuery);
+      await page.fill('#e2e-searchbar-search-input', ''); // Clear existing
+      await page.fill('#e2e-searchbar-search-input', query);
       await randomDelay(500, 1000);
       await page.click('#e2e-searchbar-search-button');
       
       // Wait for search results to load (SPA transition or full reload)
       await randomDelay(4000, 5000);
     } catch (e) {
-      logger.warn("UI search failed, falling back to direct URL...");
-      const searchUrl = `https://${this.domain}/search?q=${encodeURIComponent(productQuery)}`;
+      logger.warn(`UI search failed for "${query}", falling back to direct URL...`);
+      const searchUrl = `https://${this.domain}/search?q=${encodeURIComponent(query)}`;
+      logger.info(`Direct URL: ${searchUrl}`);
       await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
       await randomDelay(2000, 3000);
     }
 
     const results = await page.evaluate((maxResults) => {
       const items: any[] = [];
-      // This selector needs to be adjusted based on Reebelo's actual DOM
-      const cards = document.querySelectorAll('a[href*="/products/"], div[data-testid="product-card"]');
+      // Look for product cards: try more robust selectors
+      // Reebelo might use different structures; look for containers that link to product pages
+      const cards = document.querySelectorAll('a[href*="/products/"], div[data-testid*="product-card"], article, .product-item, .search-result-item');
       
       for (const card of Array.from(cards).slice(0, maxResults)) {
-        const titleEl = card.querySelector('h2, h3, [data-testid="product-title"]');
-        const priceEl = card.querySelector('[data-testid="product-price"], .price');
+        // Look for title and price inside the container
+        const titleEl = card.querySelector('h2, h3, [data-testid="product-title"], .product-title, .title');
+        const priceEl = card.querySelector('[data-testid="product-price"], .price, .product-price');
+        
+        // Ensure we have a way to navigate to the product
         const aEl = card.tagName === 'A' ? card : card.querySelector('a');
         
         if (!titleEl || !aEl) continue;
@@ -104,6 +77,73 @@ export class ReebeloSearchService {
     }, this.maxResults);
 
     logger.info(`Found ${results.length} results on Reebelo.`);
+    return results;
+  }
+
+  async searchProduct(page: Page, productQuery: string): Promise<AmazonSearchResult[]> {
+    if (!this.hasSetLocation) {
+      logger.info("Setting Reebelo location to 3175...");
+      await page.goto(`https://${this.domain}`, { waitUntil: "domcontentloaded", timeout: 30000 });
+      await randomDelay(2000, 3000);
+
+      try {
+        // Try multiple selectors for location trigger
+        const locationTriggerSelectors = ['img[alt="Deliver to"]', '[data-testid="delivery-location"]', '.delivery-location-trigger'];
+        let triggerClicked = false;
+        
+        for (const selector of locationTriggerSelectors) {
+          const trigger = await page.$(selector);
+          if (trigger) {
+            await trigger.click();
+            triggerClicked = true;
+            await randomDelay(1000, 2000);
+            break;
+          }
+        }
+        
+        if (!triggerClicked) {
+          logger.warn("Could not find location trigger.");
+        }
+
+        // Find input with more robust selector
+        const zipInput = await page.waitForSelector('input[placeholder*="zipcode"], input[placeholder*="postcode"]', { timeout: 5000 }).catch(() => null);
+        
+        if (zipInput) {
+          await zipInput.fill('3175');
+          await randomDelay(500, 1000);
+
+          // Click Apply: search for buttons containing "Apply" text
+          const applyBtn = await page.evaluateHandle(() => {
+            const btns = Array.from(document.querySelectorAll('button'));
+            return btns.find(b => b.textContent?.trim().toLowerCase() === 'apply' || b.textContent?.trim().toLowerCase() === 'save');
+          });
+          
+          if (applyBtn && applyBtn.asElement()) {
+            await applyBtn.asElement()?.click();
+            await randomDelay(2000, 3000);
+            logger.info("Location successfully set to 3175.");
+          } else {
+            logger.warn("Could not find Apply/Save button in location modal.");
+          }
+        } else {
+          logger.warn("Could not find zipcode input field.");
+        }
+      } catch (e) {
+        logger.warn(`Error setting location: ${(e as Error).message}`);
+      }
+      this.hasSetLocation = true;
+    }
+
+    let results = await this.performSearch(page, productQuery);
+    
+    if (results.length === 0) {
+      const broadQuery = getBroadSearchQuery(productQuery);
+      if (broadQuery !== productQuery) {
+        logger.info(`Retrying Reebelo search with broad query: ${broadQuery}`);
+        results = await this.performSearch(page, broadQuery);
+      }
+    }
+
     return results;
   }
 
