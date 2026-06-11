@@ -24,56 +24,77 @@ export class ReebeloSearchService {
     logger.info(`Searching Reebelo for: "${query}"`);
     try {
       // Ensure we are on a page where the search bar exists
-      const searchInputExists = await page.$('#e2e-searchbar-search-input');
+      const searchInputExists = await page.$('input[type="text"], input[type="search"]');
       if (!searchInputExists) {
-        await page.goto(`https://${this.domain}`, { waitUntil: "domcontentloaded", timeout: 30000 });
+        await page.goto(`https://${this.domain}/search`, { waitUntil: "domcontentloaded", timeout: 30000 });
         await randomDelay(2000, 3000);
       }
 
-      await page.fill('#e2e-searchbar-search-input', ''); // Clear existing
-      await page.fill('#e2e-searchbar-search-input', query);
-      await randomDelay(500, 1000);
-      await page.click('#e2e-searchbar-search-button');
+      // Re-try filling search
+      const searchInput = await page.waitForSelector('input[type="text"], input[type="search"]', { timeout: 10000 });
+      await searchInput?.fill('');
       
-      // Wait for search results to load (SPA transition or full reload)
+      // Type with delay
+      for (const char of query) {
+        await searchInput?.type(char, { delay: Math.random() * 200 + 100 });
+      }
+      
+      await randomDelay(500, 1000);
+      await page.keyboard.press('Enter');
+      
+      // Wait for search results to load
       await randomDelay(4000, 5000);
     } catch (e) {
       logger.warn(`UI search failed for "${query}", falling back to direct URL...`);
       const searchUrl = `https://${this.domain}/search?q=${encodeURIComponent(query)}`;
       logger.info(`Direct URL: ${searchUrl}`);
       await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
-      await randomDelay(2000, 3000);
+      await randomDelay(4000, 5000);
     }
 
     const results = await page.evaluate((maxResults) => {
       const items: any[] = [];
-      // Look for product cards: try more robust selectors
-      // Reebelo might use different structures; look for containers that link to product pages
-      const cards = document.querySelectorAll('a[href*="/products/"], div[data-testid*="product-card"], article, .product-item, .search-result-item');
       
-      for (const card of Array.from(cards).slice(0, maxResults)) {
-        // Look for title and price inside the container
-        const titleEl = card.querySelector('h2, h3, [data-testid="product-title"], .product-title, .title');
-        const priceEl = card.querySelector('[data-testid="product-price"], .price, .product-price');
+      // Let's log some information to help debug
+      const divs = Array.from(document.querySelectorAll('div'));
+      console.log("DEBUG: Total divs: " + divs.length);
+      
+      // Try to find elements that look like a product card
+      const productElements = divs.filter(el => {
+        const text = el.innerText || "";
+        // Look for price pattern AND a link
+        return text.includes('A$') && el.querySelectorAll('a').length > 0;
+      });
+      
+      console.log("DEBUG: Found " + productElements.length + " potential product containers.");
+      
+      // Find the first link inside this container, which likely is the product link
+      const filteredProducts = [];
+      for (const el of productElements) {
+        const a = el.querySelector('a');
+        if (!a) continue;
         
-        // Ensure we have a way to navigate to the product
-        const aEl = card.tagName === 'A' ? card : card.querySelector('a');
-        
-        if (!titleEl || !aEl) continue;
-
-        const title = titleEl.textContent?.trim() || "";
-        const rawUrl = aEl.getAttribute('href') || "";
-        const url = rawUrl.startsWith('http') ? rawUrl : `https://${window.location.host}${rawUrl}`;
+        const title = el.innerText.trim().split('\n')[0].trim();
+        const url = a.getAttribute('href') || "";
+        const fullUrl = url.startsWith('http') ? url : (url.startsWith('/') ? `https://${window.location.host}${url}` : `https://${window.location.host}/${url}`);
         
         let price = null;
-        if (priceEl) {
-          const match = priceEl.textContent?.replace(/[^0-9.]/g, "");
-          if (match) price = parseFloat(match);
+        const priceText = el.innerText.match(/A\$([0-9,.]+)/);
+        if (priceText) {
+          price = parseFloat(priceText[1].replace(/,/g, ""));
         }
 
-        items.push({ title, price, url, rating: null, reviewCount: null, isPrime: false });
+        if (title && fullUrl && (fullUrl.includes('/products/') || fullUrl.includes('/p/') || fullUrl.includes('/collections/'))) {
+          // EXCLUSION: Skip known irrelevant accessories
+          if (title.toLowerCase().includes('tempered glass protector') || title.toLowerCase().includes('protector')) continue;
+
+          console.log("DEBUG: Found product: " + title + " at " + fullUrl);
+          filteredProducts.push({ title, price, url: fullUrl, rating: null, reviewCount: null, isPrime: false });
+          
+          if (filteredProducts.length >= 10) break;
+        }
       }
-      return items;
+      return filteredProducts;
     }, this.maxResults);
 
     logger.info(`Found ${results.length} results on Reebelo.`);
@@ -134,17 +155,39 @@ export class ReebeloSearchService {
       this.hasSetLocation = true;
     }
 
-    let results = await this.performSearch(page, productQuery);
-    
+    const broadQuery = getBroadSearchQuery(productQuery);
+    logger.info(`Searching Reebelo with broad query: ${broadQuery}`);
+    let results = await this.performSearch(page, broadQuery);
+
     if (results.length === 0) {
-      const broadQuery = getBroadSearchQuery(productQuery);
-      if (broadQuery !== productQuery) {
-        logger.info(`Retrying Reebelo search with broad query: ${broadQuery}`);
-        results = await this.performSearch(page, broadQuery);
-      }
+      return results;
     }
 
-    return results;
+    // Rank results based on specs
+    const targetSpecs = extractSpecs(productQuery);
+    
+    const rankedResults = results.map(result => {
+      let score = 0;
+      const titleLower = result.title.toLowerCase();
+
+      // Score based on storage match
+      for (const storage of targetSpecs.storage) {
+        if (titleLower.includes(storage.toLowerCase())) score += 10;
+      }
+
+      // Score based on color match
+      for (const color of targetSpecs.colors) {
+        if (titleLower.includes(color.toLowerCase())) score += 5;
+      }
+
+      return { result, score };
+    });
+
+    // Sort by score descending
+    rankedResults.sort((a, b) => b.score - a.score);
+    
+    // Return sorted results
+    return rankedResults.map(r => r.result);
   }
 
   async selectVariantsAndGetPrice(page: Page, product: BecexProduct): Promise<{price: number | null, cleanUrl: string}> {

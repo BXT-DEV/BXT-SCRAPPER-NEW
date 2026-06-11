@@ -145,7 +145,7 @@ export function getBroadSearchQuery(name: string): string {
   broad = broad.replace(/\s+/g, " ").trim();
 
   // 5. Remove connectivity
-  broad = broad.replace(/\b(Cellular|Wi-Fi|Wifi)\b/gi, "");
+  broad = broad.replace(/\b(Cellular|Wi-Fi|Wifi|5G|4G)\b/gi, "");
   broad = broad.replace(/\s+/g, " ").trim();
 
   // 6. Remove colors
