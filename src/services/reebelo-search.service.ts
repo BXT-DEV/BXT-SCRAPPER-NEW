@@ -68,8 +68,9 @@ export class ReebeloSearchService {
       
       console.log("DEBUG: Found " + productElements.length + " potential product containers.");
       
-      for (const el of productElements.slice(0, maxResults * 2)) {
-        // Find the first link inside this container, which likely is the product link
+      // Find the first link inside this container, which likely is the product link
+      const filteredProducts = [];
+      for (const el of productElements) {
         const a = el.querySelector('a');
         if (!a) continue;
         
@@ -83,12 +84,17 @@ export class ReebeloSearchService {
           price = parseFloat(priceText[1].replace(/,/g, ""));
         }
 
-        if (title && fullUrl && (fullUrl.includes('/products/') || fullUrl.includes('/p/'))) {
+        if (title && fullUrl && (fullUrl.includes('/products/') || fullUrl.includes('/p/') || fullUrl.includes('/collections/'))) {
+          // EXCLUSION: Skip known irrelevant accessories
+          if (title.toLowerCase().includes('tempered glass protector') || title.toLowerCase().includes('protector')) continue;
+
           console.log("DEBUG: Found product: " + title + " at " + fullUrl);
-          items.push({ title, price, url: fullUrl, rating: null, reviewCount: null, isPrime: false });
+          filteredProducts.push({ title, price, url: fullUrl, rating: null, reviewCount: null, isPrime: false });
+          
+          if (filteredProducts.length >= 10) break;
         }
       }
-      return items;
+      return filteredProducts;
     }, this.maxResults);
 
     logger.info(`Found ${results.length} results on Reebelo.`);
