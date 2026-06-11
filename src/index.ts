@@ -187,6 +187,13 @@ async function processSingleProduct(
   matcherService: GeminiMatcherService,
   page: Page
 ): Promise<ScrapedResult> {
+  // Pre-filter: Exclude accessories
+  const accessoryKeywords = ["Protector", "Case", "Cover", "Glass"];
+  if (accessoryKeywords.some(keyword => product.productName.toLowerCase().includes(keyword.toLowerCase()))) {
+    logger.info(`Skipping accessory item: ${product.productName}`);
+    return buildNoMatchResult(product);
+  }
+
   // Pre-filter using rules.json
   const rulesConfig = loadRules();
   const catRules = rulesConfig[config.mappingCategory];

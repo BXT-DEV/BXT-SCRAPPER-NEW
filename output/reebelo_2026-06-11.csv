@@ -1,6 +1,6 @@
 SKU;Product Name;link;link_round1;amazon_price;amazon_title;match_confidence;status;error_message
 SMZFold5512GBGry-VR-ASN-AU;Samsung Galaxy Z Fold 5 (512GB, Grey) - Pristine;;;;;0;no_match;
-GNT10Plus5G256GBBlu-RD-VR-EXD-AU;Samsung Galaxy Note 10+ Plus 5G (12GB RAM, 256GB, Blue) - Excellent;;;;;0;error;page.evaluate: Execution context was destroyed, most likely because of a navigation
+GNT10Plus5G256GBBlu-RD-VR-EXD-AU;Samsung Galaxy Note 10+ Plus 5G (12GB RAM, 256GB, Blue) - Excellent;;;;;0;no_match;
 GNT10Plus5G256GBWht-RD-VR-EXD-AU;Samsung Galaxy Note 10+ Plus 5G (12GB RAM, 256GB, White) - Excellent;;;;;0;no_match;
 GalxNote10+5G512GBWht-RD-VR-EXD-AU;Samsung Galaxy Note 10+ Plus 5G (512GB, White)  - Excellent;;;;;0;no_match;
 SMZFold5512GBGryAS-VR-ASN-AU;Samsung Galaxy Z Fold 5 (512GB, Grey) Australian Stock - Pristine;;;;;0;no_match;
@@ -40,19 +40,3 @@ SMFLD61TBSlv-VR-ASN-AU;Samsung Galaxy Z Fold 6 (1TB, Silver) - Pristine;;;;;0;no
 SMFLD61TBWht-VR-ASN-AU;Samsung Galaxy Z Fold 6 (1TB, White) - Pristine;;;;;0;no_match;
 SGlxZFold6256GBBlk-VR-ASN-AU;Samsung Galaxy Z Fold 6 (256GB, Black) - Pristine;;;;;0;no_match;
 SGlxZFold6256GBNvy-VR-ASN-AU;Samsung Galaxy Z Fold 6 (256GB, Navy) - Pristine;;;;;0;no_match;
-SGlxZFold6256GBPnk-VR-ASN-AU;Samsung Galaxy Z Fold 6 (256GB, Pink) - Pristine;;;;;0;no_match;
-SGlxZFold6256GBSlv-VR-ASN-AU;Samsung Galaxy Z Fold 6 (256GB, Silver) - Pristine;;;;;0;no_match;
-SGlxZFold6256GBWht-VR-ASN-AU;Samsung Galaxy Z Fold 6 (256GB, White) - Pristine;;;;;0;no_match;
-SM25UT512GBBlk-RD-VR-EXD-AU;Samsung Galaxy S25 Ultra 5G (512GB, Black) - Excellent;;;;;0;no_match;
-SM25UT512GBGry-RD-VR-EXD-AU;Samsung Galaxy S25 Ultra 5G (512GB, Gray) - Excellent;;;;;0;no_match;
-SM25PLS256GBSil-RD-VR-EXD-AU;Samsung Galaxy S25 Plus 5G (256GB, Silver Shadow) - Excellent;;;;;0;no_match;
-SM25PLS256GBNav-RD-VR-EXD-AU;Samsung Galaxy S25 Plus 5G (256GB, Navy) - Excellent;;;;;0;no_match;
-SGlxZFold6512GBBlk-VR-ASN-AU;Samsung Galaxy Z Fold 6 (512GB, Black) - Pristine;;;;;0;no_match;
-SGlxZFold6512GBNvy-VR-ASN-AU;Samsung Galaxy Z Fold 6 (512GB, Navy) - Pristine;;;;;0;no_match;
-iPd10256GBBlu-RD-VR-EXD-AU;Apple iPad 10 (256GB, Blue) - Excellent;;;;;0;no_match;
-iPd10256GBPnk-RD-VR-EXD-AU;Apple iPad 10 (256GB, Pink) - Excellent;;;;;0;no_match;
-iPd10256GBSlv-RD-VR-EXD-AU;Apple iPad 10 (256GB, Silver) - Excellent;;;;;0;no_match;
-iPd10256GBYlw-RD-VR-EXD-AU;Apple iPad 10 (256GB, Yellow) - Excellent;;;;;0;no_match;
-SGlxZFold6512GBPnk-VR-ASN-AU;Samsung Galaxy Z Fold 6 (512GB, Pink) - Pristine;;;;;0;no_match;
-SGlxZFold6512GBSlv-VR-ASN-AU;Samsung Galaxy Z Fold 6 (512GB, Silver) - Pristine;;;;;0;no_match;
-SGlxZFold6512GBWht-VR-ASN-AU;Samsung Galaxy Z Fold 6 (512GB, White) - Pristine;;;;;0;no_match;
