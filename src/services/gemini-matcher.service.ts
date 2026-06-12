@@ -155,12 +155,12 @@ CRITICAL MATCHING RULES:
 1. **MODEL NUMBER MUST MATCH EXACTLY**: The exact model identifier must match. "EOS 250D" is NOT "EOS 2000D". "iPhone 15" is NOT "iPhone 15 Pro". "Galaxy S24" is NOT "Galaxy S24+". "iPad Air M2" is NOT "iPad Air M1". Pay close attention to every digit and word in the model name.
 2. **STORAGE & COLOR ARE ABSOLUTE**: If the source says "Titanium Blue" and the result says "Titanium Grey", it is NOT a match. If the source says "1TB" and the result says "512GB", it is NOT a match.
 3. **EXACT KEYWORDS**: Look for exact matches for storage (e.g., 128GB, 256GB, 512GB, 1TB) and color names.
-4. **CONDITION MATCHING**: For Refurbished, ensure the condition maps correctly per the store-specific rules above.
+4. **CONDITION MAPPING (CRITICAL)**: Treat "Pristine" as "Like New". Treat "Excellent" as "Very Good". If the source product is Pristine, it matches Reebelo's "Like New" (or "Pristine") listings. If the source product is Excellent, it matches Reebelo's "Very Good" (or "Excellent") listings. Do NOT reject based on these label differences.
 5. **YEAR MATCHING**: If the source product specifies a release year (e.g., 2021, 2022, 2023), the matched result MUST be from the same year. Do NOT match a 2022 product with a 2023 listing.
 6. **BODY vs KIT**: "Body Only" is NOT the same as a "Kit" with a lens. If the source says "Body Only", reject any result that includes a lens kit.
 7. If multiple results match, pick the one that matches the title most closely.
 8. If NONE match or color/specs/model differ, you MUST set isMatch to false. Do NOT force a match.
-9. Set confidence between 0.0 and 1.0. Only use >= 0.8 when model, storage, color, and condition ALL match exactly.
+9. Set confidence between 0.0 and 1.0. Only use >= 0.8 when model, storage, color, and condition ALL match exactly (allowing for the condition mapping rule in #4).
 
 EXAMPLES OF CORRECT MATCHING:
 - Source: "Canon EOS 250D Body Only Black" → Result: "Canon EOS 2000D Kit 18-55mm" → isMatch: FALSE (different model: 250D ≠ 2000D, body ≠ kit)
@@ -526,7 +526,8 @@ SOURCE PRODUCT: ${becexProduct.productName}
 SEARCH RESULTS:
 ${searchResults.map((r, i) => `[${i}] ${r.title}`).join("\n")}
     
-Select up to 3 best candidates based on title similarity.
+Select up to 6 best candidates based on title similarity.
+CRITICAL: IGNORE products that are accessories (protectors, cases, covers, glass, films, stickers).
 Return JSON: { "candidates": [{ "index": number, "reason": string }] }`;
 
     try {
@@ -541,7 +542,8 @@ Return JSON: { "candidates": [{ "index": number, "reason": string }] }`;
       return parsed.candidates;
     } catch (e) {
       logger.error(`Error in getTopCandidates: ${(e as Error).message}`);
-      return searchResults.slice(0, 3).map((_, i) => ({ index: i, reason: "Fallback (API Error)" }));
+      // Fallback: Use all available (up to 6)
+      return searchResults.slice(0, 6).map((_, i) => ({ index: i, reason: "Fallback (API Error)" }));
     }
   }
 

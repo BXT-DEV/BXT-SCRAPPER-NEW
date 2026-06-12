@@ -86,7 +86,18 @@ export class ReebeloSearchService {
 
         if (title && fullUrl && (fullUrl.includes('/products/') || fullUrl.includes('/p/') || fullUrl.includes('/collections/'))) {
           // EXCLUSION: Skip known irrelevant accessories
-          if (title.toLowerCase().includes('tempered glass protector') || title.toLowerCase().includes('protector')) continue;
+          const accessoryKeywords = ['protector', 'case', 'cover', 'glass', 'film', 'sticker'];
+          
+          const titleLower = title.toLowerCase();
+          const urlLower = fullUrl.toLowerCase();
+          
+          const isAccessory = accessoryKeywords.some(keyword => 
+            titleLower.includes(keyword) || urlLower.includes(keyword)
+          );
+
+          console.log(`DEBUG: Checking product: "${title}" (Accessory: ${isAccessory})`);
+          
+          if (isAccessory) continue;
 
           console.log("DEBUG: Found product: " + title + " at " + fullUrl);
           filteredProducts.push({ title, price, url: fullUrl, rating: null, reviewCount: null, isPrime: false });
@@ -108,22 +119,18 @@ export class ReebeloSearchService {
       await randomDelay(2000, 3000);
 
       try {
-        // Try multiple selectors for location trigger
-        const locationTriggerSelectors = ['img[alt="Deliver to"]', '[data-testid="delivery-location"]', '.delivery-location-trigger'];
-        let triggerClicked = false;
+        // Try finding the button that contains 'Deliver to'
+        const trigger = await page.evaluateHandle(() => {
+          const buttons = Array.from(document.querySelectorAll('button'));
+          return buttons.find(b => b.innerText.includes('Deliver to'));
+        });
         
-        for (const selector of locationTriggerSelectors) {
-          const trigger = await page.$(selector);
-          if (trigger) {
-            await trigger.click();
-            triggerClicked = true;
-            await randomDelay(1000, 2000);
-            break;
-          }
-        }
-        
-        if (!triggerClicked) {
-          logger.warn("Could not find location trigger.");
+        if (trigger && trigger.asElement()) {
+          await trigger.asElement()?.click();
+          logger.info("Clicked location trigger based on 'Deliver to' text.");
+          await randomDelay(1000, 2000);
+        } else {
+          logger.warn("Could not find location trigger button containing 'Deliver to'.");
         }
 
         // Find input with more robust selector
@@ -206,10 +213,16 @@ export class ReebeloSearchService {
     const storeRules = catRules?.stores?.reebelo;
 
     // 1. Condition selection
+    // Mapping: Pristine -> 'Like New', Excellent -> 'Very Good'
+    const targetConditions: { [key: string]: string[] } = {
+      Pristine: ['Like New', 'Pristine'],
+      Excellent: ['Very Good', 'Excellent']
+    };
+
     if (isPristine && storeRules?.conditionMapping?.Pristine) {
-      await this.clickOrThrow(page, storeRules.conditionMapping.Pristine, "Condition: Pristine");
+      await this.clickOrThrow(page, targetConditions.Pristine, "Condition: Like New");
     } else if (isExcellent && storeRules?.conditionMapping?.Excellent) {
-      await this.clickOrThrow(page, storeRules.conditionMapping.Excellent, "Condition: Excellent");
+      await this.clickOrThrow(page, targetConditions.Excellent, "Condition: Very Good");
     }
 
     // 2. Storage selection
