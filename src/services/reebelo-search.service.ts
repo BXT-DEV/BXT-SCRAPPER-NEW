@@ -279,9 +279,9 @@ export class ReebeloSearchService {
     // 3. Condition selection (now available after storage+color)
     // Mapping: Pristine -> 'Like New', Excellent -> 'Very Good'
     if (isPristine && storeRules?.conditionMapping?.Pristine) {
-      await this.clickReebeloVariant(page, "condition", ['Like New', 'Pristine'], "Condition: Like New");
+      await this.clickReebeloVariant(page, "condition", storeRules.conditionMapping.Pristine, "Condition: Pristine");
     } else if (isExcellent && storeRules?.conditionMapping?.Excellent) {
-      await this.clickReebeloVariant(page, "condition", ['Very Good', 'Excellent'], "Condition: Very Good");
+      await this.clickReebeloVariant(page, "condition", storeRules.conditionMapping.Excellent, "Condition: Excellent");
     }
 
     // 4. Connectivity selection

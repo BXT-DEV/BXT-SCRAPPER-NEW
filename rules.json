@@ -9,11 +9,13 @@
       "reebelo": {
         "conditionMapping": {
           "Pristine": [
-            "Premium",
-            "Pristine"
+            "Like New",
+            "Pristine",
+            "Premium"
           ],
           "Excellent": [
-            "Excellent"
+            "Excellent",
+            "Very Good"
           ]
         },
         "batteryPolicy": "Standard Only",

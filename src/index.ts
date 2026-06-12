@@ -32,7 +32,7 @@ import { DigidirectSearchService } from "./services/digidirect-search.service.js
 import { GeorgesSearchService } from "./services/georges-search.service.js";
 import { GeminiMatcherService } from "./services/gemini-matcher.service.js";
 import { getSmartSearchQuery, getBroadSearchQuery } from "./utils/product-utils.js";
-import type { BecexProduct, ScrapedResult, AmazonSearchResult } from "./types/index.js";
+import type { BecexProduct, ScrapedResult, AmazonSearchResult, DetailedCandidate } from "./types/index.js";
 import fs from "fs";
 import type { Page } from "playwright";
 import { loadRules } from "./utils/rules-manager.js";
