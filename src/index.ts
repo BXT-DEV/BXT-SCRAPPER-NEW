@@ -237,7 +237,23 @@ async function processSingleProduct(
     return buildNoMatchResult(product);
   }
 
-  // Step 2: Inspection Sampling
+  // ── Step 2: Match and Extract Price ──────────────────────
+
+  // Fast path for nested stores (e.g., Reebelo) — one product page = all variants.
+  // Deterministic variant selection, no Gemini needed.
+  const hasMatchDirectly = typeof (searchService as any).matchDirectly === "function";
+  logger.info(`matchDirectly available: ${hasMatchDirectly} (service: ${searchService.constructor.name})`);
+
+  if (hasMatchDirectly) {
+    logger.info(`Using direct matching for ${product.productName}`);
+    const directMatch = await (searchService as any).matchDirectly(page, product, searchResults);
+    if (!directMatch) {
+      return buildNoMatchResult(product);
+    }
+    return buildMatchedResult(product, directMatch.url, directMatch.title, directMatch.price, 1.0);
+  }
+
+  // Standard path: AI-powered candidate evaluation (for stores without nested variants)
   let screenshot: Buffer | undefined;
   try {
     screenshot = await page.screenshot({ fullPage: false, timeout: 5000 });
@@ -255,7 +271,6 @@ async function processSingleProduct(
     logger.info(`Inspecting candidate [${candidate.index}]: ${result.title}`);
     
     await page.goto(result.url, { waitUntil: "domcontentloaded", timeout: 30000 });
-    // Assuming page content has the detailed specs
     const details = await page.evaluate(() => document.body.innerText.substring(0, 1000));
     detailedCandidates.push({ ...result, index: candidate.index, details });
   }

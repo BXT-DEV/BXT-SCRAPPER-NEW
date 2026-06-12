@@ -197,6 +197,54 @@ export class ReebeloSearchService {
     return rankedResults.map(r => r.result);
   }
 
+  /**
+   * Deterministic matching for Reebelo — one product page = all variants.
+   * Navigates to the first valid product page and selects the exact variant.
+   * Bypasses Gemini AI entirely — no false negatives from prompt gaps.
+   * 
+   * Returns null if no valid product page was found in search results.
+   */
+  async matchDirectly(
+    page: Page,
+    product: BecexProduct,
+    searchResults: AmazonSearchResult[]
+  ): Promise<{ url: string; title: string; price: number | null } | null> {
+    // Find the first valid product page (skip search/category pages)
+    const validResult = searchResults.find(r =>
+      r.url.includes("/collections/") || r.url.includes("/products/") || r.url.includes("/p/")
+    );
+
+    if (!validResult) {
+      logger.warn(`No valid Reebelo product page found in ${searchResults.length} results.`);
+      return null;
+    }
+
+    logger.info(`Navigating to Reebelo product page: ${validResult.title}`);
+    await page.goto(validResult.url, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await randomDelay(2000, 3000);
+
+    // Select all variants using the existing full flow
+    try {
+      const { price, cleanUrl } = await this.selectVariantsAndGetPrice(page, product);
+
+      // Read the final page title after variant selection
+      const pageTitle = await page.evaluate(() => {
+        const h1 = document.querySelector('h1');
+        const subtitle = document.querySelector('h1 + p, h1 + div, [class*="subtitle"]');
+        return [h1?.textContent?.trim(), subtitle?.textContent?.trim()].filter(Boolean).join(' - ');
+      }) || validResult.title;
+
+      return { url: cleanUrl, title: pageTitle, price };
+    } catch (error) {
+      const msg = (error as Error).message;
+      if (msg.startsWith("REQUIRED_VARIANT_NOT_FOUND")) {
+        logger.info(`  ✗ Variant not available: ${msg}`);
+        return null;
+      }
+      throw error;
+    }
+  }
+
   async selectVariantsAndGetPrice(page: Page, product: BecexProduct): Promise<{price: number | null, cleanUrl: string}> {
     logger.info(`Selecting Reebelo variants for: ${product.productName}`);
     await randomDelay(2000, 3000);
@@ -212,43 +260,46 @@ export class ReebeloSearchService {
 
     const storeRules = catRules?.stores?.reebelo;
 
-    // 1. Condition selection
-    // Mapping: Pristine -> 'Like New', Excellent -> 'Very Good'
-    const targetConditions: { [key: string]: string[] } = {
-      Pristine: ['Like New', 'Pristine'],
-      Excellent: ['Very Good', 'Excellent']
-    };
+    // ── CORRECT ORDER: Storage → Color → Condition → Battery → SIM ──
+    // Reebelo is nested: condition options only appear after storage+color are set.
 
-    if (isPristine && storeRules?.conditionMapping?.Pristine) {
-      await this.clickOrThrow(page, targetConditions.Pristine, "Condition: Like New");
-    } else if (isExcellent && storeRules?.conditionMapping?.Excellent) {
-      await this.clickOrThrow(page, targetConditions.Excellent, "Condition: Very Good");
-    }
-
-    // 2. Storage selection
+    // 1. Storage selection (must be first)
     if (specs.storage.length > 0) {
-      await this.clickOrThrow(page, specs.storage, "Storage");
+      await this.clickReebeloVariant(page, "storage", specs.storage, "Storage");
     }
 
-    // 3. Color selection
+    // 2. Color selection (must be before condition)
     if (specs.colors.length > 0) {
-      await this.clickOrThrow(page, specs.colors, "Color");
+      await this.clickReebeloVariant(page, "color", specs.colors, "Color");
+    }
+
+    // Wait for page to update after storage+color selection
+    await randomDelay(1500, 2500);
+
+    // 3. Condition selection (now available after storage+color)
+    // Mapping: Pristine -> 'Like New', Excellent -> 'Very Good'
+    if (isPristine && storeRules?.conditionMapping?.Pristine) {
+      await this.clickReebeloVariant(page, "condition", ['Like New', 'Pristine'], "Condition: Like New");
+    } else if (isExcellent && storeRules?.conditionMapping?.Excellent) {
+      await this.clickReebeloVariant(page, "condition", ['Very Good', 'Excellent'], "Condition: Very Good");
     }
 
     // 4. Connectivity selection
     if (specs.connectivity.length > 0) {
-      await this.clickOrThrow(page, specs.connectivity, "Connectivity");
+      await this.clickReebeloVariant(page, "connectivity", specs.connectivity, "Connectivity");
     }
 
     // 5. Battery selection
     if (storeRules?.batteryPolicy === "Standard Only") {
-      const batterySuccess = await this.clickVariantByText(page, ["Standard Battery", "Standard"]);
+      const batterySuccess = await this.clickReebeloVariant(page, "battery", ["Standard Battery", "Standard"], "Battery", false);
       if (!batterySuccess) {
         const hasOtherBatteryOptions = await page.evaluate(() => {
-          const buttons = Array.from(document.querySelectorAll('button, div[role="button"], label, span'));
-          return buttons.some(btn => {
-            const txt = btn.textContent?.toLowerCase() || '';
-            return (txt.includes('elevated') || txt.includes('new battery')) && txt.length < 30;
+          const batterySection = document.querySelector('#e2e-pdp-battery');
+          if (!batterySection) return false;
+          const links = batterySection.querySelectorAll('a');
+          return Array.from(links).some(a => {
+            const txt = a.textContent?.toLowerCase() || '';
+            return txt.includes('elevated') || txt.includes('new battery');
           });
         });
         if (hasOtherBatteryOptions) {
@@ -259,16 +310,16 @@ export class ReebeloSearchService {
 
     // 6. SIM selection
     if (storeRules?.simPolicy === "Physical Only") {
-      const simSuccess = await this.clickVariantByText(page, ["Physical SIM", "Dual SIM", "Nano-SIM", "Single SIM"]);
+      const simSuccess = await this.clickReebeloVariant(page, "sim", ["Physical SIM", "Dual SIM", "Nano-SIM", "Single SIM"], "SIM", false);
       if (!simSuccess) {
         const hasEsimOption = await page.evaluate(() => {
-          const buttons = Array.from(document.querySelectorAll('button, div[role="button"], label, span'));
           const title = document.querySelector('h1')?.innerText || '';
           if (title.toLowerCase().includes('esim')) return true;
-          return buttons.some(btn => {
-            const txt = btn.textContent?.toLowerCase() || '';
-            return txt.includes('esim') && txt.length < 30;
-          });
+          const simSection = document.querySelector('#e2e-pdp-sim');
+          if (!simSection) return false;
+          return Array.from(simSection.querySelectorAll('a')).some(a =>
+            a.textContent?.toLowerCase().includes('esim')
+          );
         });
         if (hasEsimOption) {
           throw new Error("REQUIRED_VARIANT_NOT_FOUND: Physical SIM (Only eSIM option is available)");
@@ -293,24 +344,118 @@ export class ReebeloSearchService {
     return { price, cleanUrl: page.url() };
   }
 
-  private async clickOrThrow(page: Page, texts: string[], variantName: string): Promise<void> {
-    const success = await this.clickVariantByText(page, texts);
-    if (!success) {
-      throw new Error(`REQUIRED_VARIANT_NOT_FOUND: ${variantName} (${texts.join(", ")})`);
+  /**
+   * Color alias map for matching abbreviated → brand-prefixed colors.
+   * Example: "Gray" should also try "Titanium Gray", "Titanium Grey".
+   */
+  private static readonly COLOR_ALIASES: ReadonlyMap<string, string[]> = new Map([
+    ["gray",   ["Titanium Gray", "Titanium Grey"]],
+    ["grey",   ["Titanium Gray", "Titanium Grey"]],
+    ["black",  ["Titanium Black", "Titanium Jet Black"]],
+    ["blue",   ["Titanium Blue", "Titanium Silver Blue"]],
+    ["silver", ["Titanium Silver", "Titanium White Silver", "Silver Shadow"]],
+    ["white",  ["Titanium White", "Titanium White Silver"]],
+    ["pink",   ["Titanium Pink", "Titanium Pink Gold"]],
+    ["green",  ["Titanium Green", "Titanium Jade Green"]],
+    ["gold",   ["Titanium Gold", "Titanium Pink Gold"]],
+    ["natural",["Titanium Natural", "Natural Titanium"]],
+  ]);
+
+  /**
+   * Clicks a Reebelo variant using their structured e2e-pdp-* IDs.
+   * Falls back to generic text-based matching if IDs are not found.
+   */
+  private async clickReebeloVariant(
+    page: Page,
+    variantType: string,
+    targetValues: string[],
+    displayName: string,
+    throwOnMiss = true
+  ): Promise<boolean> {
+    // Build expanded search list with color aliases
+    const expandedValues = [...targetValues];
+    if (variantType === "color") {
+      for (const val of targetValues) {
+        const aliases = ReebeloSearchService.COLOR_ALIASES.get(val.toLowerCase());
+        if (aliases) {
+          expandedValues.push(...aliases);
+        }
+      }
     }
+
+    // Strategy 1: Use e2e-pdp-{type}-{value} IDs (most reliable)
+    for (const value of expandedValues) {
+      const elementId = `e2e-pdp-${variantType}-${value}`;
+      // Use attribute selector — IDs may contain spaces (e.g., "e2e-pdp-condition-Very Good")
+      const element = await page.$(`[id="${elementId}"]`).catch(() => null);
+      if (element) {
+        const isVisible = await element.isVisible().catch(() => false);
+        if (isVisible) {
+          await element.click({ force: true }).catch(() => {});
+          logger.info(`  ✓ Selected ${displayName}: "${value}" (via ID)`);
+          await randomDelay(500, 1000);
+          return true;
+        }
+      }
+    }
+
+    // Strategy 2: Search within e2e-pdp-{type} section container
+    const sectionId = `e2e-pdp-${variantType}`;
+    const sectionExists = await page.$(`#${sectionId}`).catch(() => null);
+    if (sectionExists) {
+      for (const value of expandedValues) {
+        const found = await page.evaluate(({ sectionId, value }) => {
+          const section = document.getElementById(sectionId);
+          if (!section) return false;
+          const links = Array.from(section.querySelectorAll('a'));
+          for (const link of links) {
+            const text = link.textContent?.trim() || '';
+            const ariaLabel = link.getAttribute('aria-label') || '';
+            if (
+              text.toLowerCase() === value.toLowerCase() ||
+              text.toLowerCase().includes(value.toLowerCase()) ||
+              ariaLabel.toLowerCase().includes(value.toLowerCase())
+            ) {
+              (link as HTMLElement).click();
+              return true;
+            }
+          }
+          return false;
+        }, { sectionId, value });
+
+        if (found) {
+          logger.info(`  ✓ Selected ${displayName}: "${value}" (via section)`);
+          await randomDelay(500, 1000);
+          return true;
+        }
+      }
+    }
+
+    // Strategy 3: Fallback to generic text-based matching (legacy approach)
+    const fallbackSuccess = await this.clickVariantByText(page, expandedValues);
+    if (fallbackSuccess) {
+      logger.info(`  ✓ Selected ${displayName} (via text fallback)`);
+      return true;
+    }
+
+    if (throwOnMiss) {
+      throw new Error(`REQUIRED_VARIANT_NOT_FOUND: ${displayName} (${targetValues.join(", ")})`);
+    }
+
+    logger.warn(`  ✗ Could not find ${displayName}: ${targetValues.join(", ")}`);
+    return false;
   }
 
   private async clickVariantByText(page: Page, texts: string[]): Promise<boolean> {
     try {
-      const buttons = await page.$$('button, div[role="button"], label, span');
-      for (const btn of buttons) {
-        const text = await btn.textContent();
+      const elements = await page.$$('a, button, div[role="button"], label, span');
+      for (const element of elements) {
+        const text = await element.textContent();
         if (text && texts.some(t => text.toLowerCase() === t.toLowerCase() || (text.toLowerCase().includes(t.toLowerCase()) && text.length < 30))) {
-          // Check if it's actually clickable or already selected
-          const isVisible = await btn.isVisible();
-          const isEnabled = await btn.isEnabled();
+          const isVisible = await element.isVisible();
+          const isEnabled = await element.isEnabled();
           if (isVisible && isEnabled) {
-            await btn.click({ force: true }).catch(() => {});
+            await element.click({ force: true }).catch(() => {});
             await randomDelay(500, 1000);
             return true;
           }

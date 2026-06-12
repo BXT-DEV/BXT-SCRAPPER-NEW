@@ -136,6 +136,33 @@ function buildStoreRules(scraperTarget: ScraperTarget, mappingCategory: MappingC
 const MIN_CONFIDENCE_THRESHOLD = 0.7;
 const MAX_GEMINI_RETRIES = 2;
 
+// ── Color Alias Map ───────────────────────────────────────
+// Bidirectional: "gray" ↔ "titanium gray", etc.
+// Samsung Galaxy S25 series uses "Titanium X" branding.
+// Reebelo and other stores may use the full name while our CSV uses the short form.
+const COLOR_ALIASES: ReadonlyMap<string, string[]> = new Map([
+  ["gray",           ["titanium gray", "titanium grey"]],
+  ["grey",           ["titanium gray", "titanium grey"]],
+  ["titanium gray",  ["gray", "grey"]],
+  ["titanium grey",  ["gray", "grey"]],
+  ["black",          ["titanium black"]],
+  ["titanium black", ["black"]],
+  ["blue",           ["titanium blue"]],
+  ["titanium blue",  ["blue"]],
+  ["silver",         ["titanium silver", "silver shadow"]],
+  ["titanium silver",["silver"]],
+  ["silver shadow",  ["silver"]],
+  ["white",          ["titanium white"]],
+  ["titanium white", ["white"]],
+  ["natural",        ["titanium natural", "natural titanium"]],
+  ["titanium natural",["natural"]],
+  ["natural titanium",["natural"]],
+  ["pink",           ["titanium pink"]],
+  ["titanium pink",  ["pink"]],
+  ["green",          ["titanium green"]],
+  ["titanium green", ["green"]],
+]);
+
 // ── Prompt template ────────────────────────────────────────
 const MATCH_PROMPT_TEMPLATE = `You are a product matching expert. Your job is to determine which search result in the provided SCREENSHOT and LIST is the EXACT SAME product as the source product.
 
@@ -153,14 +180,15 @@ CURRENT STORE: {{SCRAPER_TARGET}}
 
 CRITICAL MATCHING RULES:
 1. **MODEL NUMBER MUST MATCH EXACTLY**: The exact model identifier must match. "EOS 250D" is NOT "EOS 2000D". "iPhone 15" is NOT "iPhone 15 Pro". "Galaxy S24" is NOT "Galaxy S24+". "iPad Air M2" is NOT "iPad Air M1". Pay close attention to every digit and word in the model name.
-2. **STORAGE & COLOR ARE ABSOLUTE**: If the source says "Titanium Blue" and the result says "Titanium Grey", it is NOT a match. If the source says "1TB" and the result says "512GB", it is NOT a match.
-3. **EXACT KEYWORDS**: Look for exact matches for storage (e.g., 128GB, 256GB, 512GB, 1TB) and color names.
-4. **CONDITION MAPPING (CRITICAL)**: Treat "Pristine" as "Like New". Treat "Excellent" as "Very Good". If the source product is Pristine, it matches Reebelo's "Like New" (or "Pristine") listings. If the source product is Excellent, it matches Reebelo's "Very Good" (or "Excellent") listings. Do NOT reject based on these label differences.
-5. **YEAR MATCHING**: If the source product specifies a release year (e.g., 2021, 2022, 2023), the matched result MUST be from the same year. Do NOT match a 2022 product with a 2023 listing.
-6. **BODY vs KIT**: "Body Only" is NOT the same as a "Kit" with a lens. If the source says "Body Only", reject any result that includes a lens kit.
-7. If multiple results match, pick the one that matches the title most closely.
-8. If NONE match or color/specs/model differ, you MUST set isMatch to false. Do NOT force a match.
-9. Set confidence between 0.0 and 1.0. Only use >= 0.8 when model, storage, color, and condition ALL match exactly (allowing for the condition mapping rule in #4).
+2. **STORAGE IS ABSOLUTE**: If the source says "1TB" and the result says "512GB", it is NOT a match.
+3. **COLOR MATCHING WITH ALIASES**: Colors must match, BUT abbreviated color names are equivalent to their brand-prefixed versions. For example: "Gray" = "Titanium Gray" = "Titanium Grey", "Black" = "Titanium Black", "Blue" = "Titanium Blue", "Silver" = "Titanium Silver" = "Silver Shadow", "Natural" = "Natural Titanium". If the BASE color matches, treat it as the same color. However "Titanium Blue" is still NOT "Titanium Grey".
+4. **EXACT KEYWORDS**: Look for exact matches for storage (e.g., 128GB, 256GB, 512GB, 1TB) and color names (accounting for aliases above).
+5. **CONDITION MAPPING (CRITICAL)**: Treat "Pristine" as "Like New". Treat "Excellent" as "Very Good". If the source product is Pristine, it matches Reebelo's "Like New" (or "Pristine") listings. If the source product is Excellent, it matches Reebelo's "Very Good" (or "Excellent") listings. Do NOT reject based on these label differences.
+6. **YEAR MATCHING**: If the source product specifies a release year (e.g., 2021, 2022, 2023), the matched result MUST be from the same year. Do NOT match a 2022 product with a 2023 listing.
+7. **BODY vs KIT**: "Body Only" is NOT the same as a "Kit" with a lens. If the source says "Body Only", reject any result that includes a lens kit.
+8. If multiple results match, pick the one that matches the title most closely.
+9. If NONE match or color/specs/model differ, you MUST set isMatch to false. Do NOT force a match.
+10. Set confidence between 0.0 and 1.0. Only use >= 0.8 when model, storage, color, and condition ALL match exactly (allowing for the condition mapping rule in #5 and color alias rule in #3).
 
 EXAMPLES OF CORRECT MATCHING:
 - Source: "Canon EOS 250D Body Only Black" → Result: "Canon EOS 2000D Kit 18-55mm" → isMatch: FALSE (different model: 250D ≠ 2000D, body ≠ kit)
@@ -375,9 +403,9 @@ export class GeminiMatcherService {
       }
     }
 
-    // 4. Color Check
+    // 4. Color Check (with alias support for brand-prefixed colors)
     const commonColors = [
-      "blue", "grey", "gray", "black", "white", "silver", "gold", "green", "pink", "purple", "violet", "orange", "yellow", "cream", "natural", "titanium"
+      "blue", "grey", "gray", "black", "white", "silver", "gold", "green", "pink", "purple", "violet", "orange", "yellow", "cream", "natural"
     ];
 
     for (const color of commonColors) {
@@ -388,6 +416,9 @@ export class GeminiMatcherService {
           if (color === "gray" && targetLower.includes("grey")) continue;
           // Special case for Space Grey
           if (color === "grey" && targetLower.includes("space")) continue;
+          // Check color aliases (e.g., "gray" ↔ "titanium gray")
+          const aliases = COLOR_ALIASES.get(color);
+          if (aliases?.some(alias => targetLower.includes(alias))) continue;
           return { passed: false, reason: `Color mismatch: source has "${color}", target missing` };
         }
       }
@@ -520,13 +551,20 @@ export class GeminiMatcherService {
     becexProduct: BecexProduct,
     searchResults: AmazonSearchResult[]
   ): Promise<Candidate[]> {
+    const MAX_CANDIDATES = 6;
+
+    // Skip AI pre-filtering when results are already small enough — inspect all
+    if (searchResults.length <= MAX_CANDIDATES) {
+      return searchResults.map((_, i) => ({ index: i, reason: "All results inspected (≤6 total)" }));
+    }
+
     const promptText = `You are a product matching assistant.
 SOURCE PRODUCT: ${becexProduct.productName}
     
 SEARCH RESULTS:
 ${searchResults.map((r, i) => `[${i}] ${r.title}`).join("\n")}
     
-Select up to 6 best candidates based on title similarity.
+Select up to ${MAX_CANDIDATES} best candidates based on title similarity.
 CRITICAL: IGNORE products that are accessories (protectors, cases, covers, glass, films, stickers).
 Return JSON: { "candidates": [{ "index": number, "reason": string }] }`;
 
