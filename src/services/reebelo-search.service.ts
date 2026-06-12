@@ -23,87 +23,63 @@ export class ReebeloSearchService {
   private async performSearch(page: Page, query: string): Promise<AmazonSearchResult[]> {
     logger.info(`Searching Reebelo for: "${query}"`);
     try {
-      // Ensure we are on a page where the search bar exists
-      const searchInputExists = await page.$('input[type="text"], input[type="search"]');
-      if (!searchInputExists) {
-        await page.goto(`https://${this.domain}/search`, { waitUntil: "domcontentloaded", timeout: 30000 });
-        await randomDelay(2000, 3000);
-      }
-
-      // Re-try filling search
-      const searchInput = await page.waitForSelector('input[type="text"], input[type="search"]', { timeout: 10000 });
-      await searchInput?.fill('');
-      
-      // Type with delay
-      for (const char of query) {
-        await searchInput?.type(char, { delay: Math.random() * 200 + 100 });
-      }
-      
-      await randomDelay(500, 1000);
-      await page.keyboard.press('Enter');
-      
-      // Wait for search results to load
-      await randomDelay(4000, 5000);
-    } catch (e) {
-      logger.warn(`UI search failed for "${query}", falling back to direct URL...`);
       const searchUrl = `https://${this.domain}/search?q=${encodeURIComponent(query)}`;
       logger.info(`Direct URL: ${searchUrl}`);
       await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
       await randomDelay(4000, 5000);
+    } catch (e) {
+      logger.warn(`Direct URL search navigation failed: ${(e as Error).message}`);
     }
 
     const results = await page.evaluate((maxResults) => {
-      const items: any[] = [];
-      
-      // Let's log some information to help debug
-      const divs = Array.from(document.querySelectorAll('div'));
-      console.log("DEBUG: Total divs: " + divs.length);
-      
-      // Try to find elements that look like a product card
-      const productElements = divs.filter(el => {
-        const text = el.innerText || "";
-        // Look for price pattern AND a link
-        return text.includes('A$') && el.querySelectorAll('a').length > 0;
+      const links = Array.from(document.querySelectorAll('a'));
+      const productLinks = links.filter(a => {
+        const href = a.getAttribute('href') || "";
+        return (href.includes('/collections/') || href.includes('/products/') || href.includes('/p/')) && href.includes('skuId=');
       });
       
-      console.log("DEBUG: Found " + productElements.length + " potential product containers.");
-      
-      // Find the first link inside this container, which likely is the product link
       const filteredProducts = [];
-      for (const el of productElements) {
-        const a = el.querySelector('a');
-        if (!a) continue;
+      const seenUrls = new Set();
+      
+      for (const a of productLinks) {
+        const href = a.getAttribute('href') || "";
+        const fullUrl = href.startsWith('http') ? href : (href.startsWith('/') ? `https://${window.location.host}${href}` : `https://${window.location.host}/${href}`);
         
-        const title = el.innerText.trim().split('\n')[0].trim();
-        const url = a.getAttribute('href') || "";
-        const fullUrl = url.startsWith('http') ? url : (url.startsWith('/') ? `https://${window.location.host}${url}` : `https://${window.location.host}/${url}`);
+        if (seenUrls.has(fullUrl)) continue;
+        
+        const img = a.querySelector('img');
+        let title = img ? img.getAttribute('alt') || "" : "";
+        if (!title) {
+          const h3 = a.querySelector('h3');
+          title = h3 ? h3.textContent?.trim() || "" : "";
+        }
+        if (!title) {
+          title = a.textContent?.trim() || "";
+        }
+        
+        title = title.trim();
+        if (!title) continue;
         
         let price = null;
-        const priceText = el.innerText.match(/A\$([0-9,.]+)/);
-        if (priceText) {
-          price = parseFloat(priceText[1].replace(/,/g, ""));
+        const priceMatch = a.textContent?.match(/A\$([0-9,.]+)/);
+        if (priceMatch) {
+          price = parseFloat(priceMatch[1].replace(/,/g, ""));
         }
+        
+        const accessoryKeywords = ['protector', 'case', 'cover', 'glass', 'film', 'sticker'];
+        const titleLower = title.toLowerCase();
+        const urlLower = fullUrl.toLowerCase();
+        
+        const isAccessory = accessoryKeywords.some(keyword => 
+          titleLower.includes(keyword) || urlLower.includes(keyword)
+        );
 
-        if (title && fullUrl && (fullUrl.includes('/products/') || fullUrl.includes('/p/') || fullUrl.includes('/collections/'))) {
-          // EXCLUSION: Skip known irrelevant accessories
-          const accessoryKeywords = ['protector', 'case', 'cover', 'glass', 'film', 'sticker'];
-          
-          const titleLower = title.toLowerCase();
-          const urlLower = fullUrl.toLowerCase();
-          
-          const isAccessory = accessoryKeywords.some(keyword => 
-            titleLower.includes(keyword) || urlLower.includes(keyword)
-          );
-
-          console.log(`DEBUG: Checking product: "${title}" (Accessory: ${isAccessory})`);
-          
-          if (isAccessory) continue;
-
-          console.log("DEBUG: Found product: " + title + " at " + fullUrl);
-          filteredProducts.push({ title, price, url: fullUrl, rating: null, reviewCount: null, isPrime: false });
-          
-          if (filteredProducts.length >= 10) break;
-        }
+        if (isAccessory) continue;
+        
+        seenUrls.add(fullUrl);
+        filteredProducts.push({ title, price, url: fullUrl, rating: null, reviewCount: null, isPrime: false });
+        
+        if (filteredProducts.length >= maxResults) break;
       }
       return filteredProducts;
     }, this.maxResults);
@@ -209,13 +185,16 @@ export class ReebeloSearchService {
     product: BecexProduct,
     searchResults: AmazonSearchResult[]
   ): Promise<{ url: string; title: string; price: number | null } | null> {
-    // Find the first valid product page (skip search/category pages)
-    const validResult = searchResults.find(r =>
-      r.url.includes("/collections/") || r.url.includes("/products/") || r.url.includes("/p/")
-    );
+    // Find the first valid product page that matches the model name (without specs)
+    const broadModelName = getBroadSearchQuery(product.productName);
+    const validResult = searchResults.find(r => {
+      const isProductPage = r.url.includes("/collections/") || r.url.includes("/products/") || r.url.includes("/p/");
+      if (!isProductPage) return false;
+      return this.isModelMatch(broadModelName, r.title);
+    });
 
     if (!validResult) {
-      logger.warn(`No valid Reebelo product page found in ${searchResults.length} results.`);
+      logger.warn(`No valid matching Reebelo product page found for ${product.productName} in ${searchResults.length} results.`);
       return null;
     }
 
@@ -466,6 +445,48 @@ export class ReebeloSearchService {
       logger.warn(`Error while looking for variant: ${texts.join(" or ")}`);
       return false;
     }
+  }
+
+  private isModelMatch(query: string, candidateTitle: string): boolean {
+    const cleanQuery = query.toLowerCase().replace(/\bplus\b/g, "+").replace(/[^a-z0-9+ ]/g, "");
+    const cleanCandidate = candidateTitle.toLowerCase().replace(/\bplus\b/g, "+").replace(/[^a-z0-9+ ]/g, "");
+
+    const queryWords = cleanQuery.split(/\s+/).filter(Boolean);
+    const candidateNormalized = cleanCandidate.replace(/\s+/g, "");
+
+    // Extract model identifiers (words containing digits)
+    const modelIdentifiers = queryWords.filter(word => /\d/.test(word));
+
+    // Core name words (excluding brands and generic words)
+    const ignoreWords = new Set([
+      "samsung", "apple", "google", "oppo", "sony", "nintendo", "canon", "nikon",
+      "galaxy", "iphone", "pixel", "ipad", "watch", "phone", "camera", "lens", "console",
+      "refurbished", "excellent", "pristine", "good", "very"
+    ]);
+
+    const coreWords = queryWords.filter(word => {
+      if (word === "+") return true;
+      if (word.length <= 2) return false;
+      if (ignoreWords.has(word)) return false;
+      if (/\d/.test(word)) return false; // Already checked in modelIdentifiers
+      return true;
+    });
+
+    // Check model identifiers (e.g., "s24", "5")
+    for (const id of modelIdentifiers) {
+      if (!candidateNormalized.includes(id)) {
+        return false;
+      }
+    }
+
+    // Check core words (e.g., "ultra", "fold")
+    for (const word of coreWords) {
+      if (!candidateNormalized.includes(word)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
 }

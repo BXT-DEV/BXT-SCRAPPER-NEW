@@ -2,7 +2,7 @@
 // BXT-SCRAPPER Type Definitions
 // ============================================================
 
-export type ScraperTarget = "amazon" | "jbhifi" | "kogan" | "phonebot" | "reebelo" | "backmarket" | "mobileciti" | "buymobile" | "spectronic" | "bestmobilephone" | "scorptec" | "centrecom" | "digidirect" | "georges";
+export type ScraperTarget = "all" | "amazon" | "jbhifi" | "kogan" | "phonebot" | "reebelo" | "backmarket" | "mobileciti" | "buymobile" | "spectronic" | "bestmobilephone" | "scorptec" | "centrecom" | "digidirect" | "georges";
 
 export type ScraperMode = "resume" | "fresh";
 

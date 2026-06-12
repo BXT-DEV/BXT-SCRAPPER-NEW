@@ -93,7 +93,7 @@ function validateCategoryTargetPair(category: MappingCategory, target: ScraperTa
       `Valid options: ${Object.keys(VALID_TARGETS_BY_CATEGORY).join(", ")}`
     );
   }
-  if (!validTargets.includes(target)) {
+  if (target !== "all" && !validTargets.includes(target)) {
     throw new Error(
       `SCRAPER_TARGET "${target}" is NOT valid for MAPPING_CATEGORY "${category}".\n` +
       `Valid targets for "${category}": ${validTargets.join(", ")}`

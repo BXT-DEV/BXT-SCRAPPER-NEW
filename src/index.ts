@@ -3,7 +3,7 @@
 // Coordinates: CSV → Search → Match → Scrape Price → Output
 // ============================================================
 
-import { config, reloadGeminiKeys } from "./config/index.js";
+import { config, reloadGeminiKeys, VALID_TARGETS_BY_CATEGORY } from "./config/index.js";
 import { logger } from "./utils/logger.js";
 import { readProductsCsv } from "./utils/csv-reader.js";
 import {
@@ -32,7 +32,7 @@ import { DigidirectSearchService } from "./services/digidirect-search.service.js
 import { GeorgesSearchService } from "./services/georges-search.service.js";
 import { GeminiMatcherService } from "./services/gemini-matcher.service.js";
 import { getSmartSearchQuery, getBroadSearchQuery } from "./utils/product-utils.js";
-import type { BecexProduct, ScrapedResult, AmazonSearchResult, DetailedCandidate } from "./types/index.js";
+import type { BecexProduct, ScrapedResult, AmazonSearchResult, DetailedCandidate, ScraperTarget } from "./types/index.js";
 import fs from "fs";
 import type { Page } from "playwright";
 import { loadRules } from "./utils/rules-manager.js";
@@ -154,7 +154,7 @@ function cleanAmazonUrl(rawUrl: string): string {
   }
 }
 
-async function waitForNewGeminiKeys(matcherService: GeminiMatcherService, currentKeys: string[]): Promise<void> {
+async function waitForNewGeminiKeys(matcherService: GeminiMatcherService, currentKeys: string[], target: ScraperTarget): Promise<void> {
   logger.warn("═══════════════════════════════════════════");
   logger.warn(" ⏸️  SCRAPER PAUSED: All Gemini Keys Exhausted ");
   logger.warn(" Please update .env with new API keys.      ");
@@ -165,7 +165,7 @@ async function waitForNewGeminiKeys(matcherService: GeminiMatcherService, curren
 
   while (true) {
     await sleep(10000); // Check every 10 seconds
-    const newKeys = reloadGeminiKeys(config.scraperTarget);
+    const newKeys = reloadGeminiKeys(target);
     
     // Check if there are any keys not in the old set
     const hasNewKeys = newKeys.some(k => !oldKeysSet.has(k));
@@ -185,7 +185,8 @@ async function processSingleProduct(
   product: BecexProduct,
   searchService: AmazonSearchService | JbHifiSearchService | KoganSearchService | PhonebotSearchService | ReebeloSearchService | BackmarketSearchService | MobilecitiSearchService | BuymobileSearchService | SpectronicSearchService | BestmobilephoneSearchService | ScorptecSearchService | CentrecomSearchService | DigidirectSearchService | GeorgesSearchService,
   matcherService: GeminiMatcherService,
-  page: Page
+  page: Page,
+  target: ScraperTarget
 ): Promise<ScrapedResult> {
   // Pre-filter: Exclude accessories
   const accessoryKeywords = ["Protector", "Case", "Cover", "Glass"];
@@ -198,19 +199,19 @@ async function processSingleProduct(
   const rulesConfig = loadRules();
   const catRules = rulesConfig[config.mappingCategory];
   if (catRules) {
-    const storeRules = catRules.stores[config.scraperTarget];
+    const storeRules = catRules.stores[target];
     if (storeRules) {
       if (storeRules.excludePristine) {
         const pristineSuffix = catRules.skuMappings?.Pristine || "-VR-ASN-AU";
         if (product.sku.endsWith(pristineSuffix)) {
-          logger.info(`Skipping Pristine item (${product.sku}) for ${config.scraperTarget} mapping (per rules).`);
+          logger.info(`Skipping Pristine item (${product.sku}) for ${target} mapping (per rules).`);
           return buildNoMatchResult(product);
         }
       }
       if (storeRules.excludeVeryGood) {
         const vgSuffix = catRules.skuMappings?.["Very Good"] || "-VGC-AU";
         if (product.sku.endsWith(vgSuffix)) {
-          logger.info(`Skipping Very Good item (${product.sku}) for ${config.scraperTarget} mapping (per rules).`);
+          logger.info(`Skipping Very Good item (${product.sku}) for ${target} mapping (per rules).`);
           return buildNoMatchResult(product);
         }
       }
@@ -298,7 +299,7 @@ async function processSingleProduct(
     cleanUrl = result.cleanUrl;
   } else {
     price = await extractPriceFromProductPage(page);
-    if (config.scraperTarget === "amazon") {
+    if (target === "amazon") {
       cleanUrl = cleanAmazonUrl(matchedResult.url);
     }
   }
@@ -311,8 +312,6 @@ async function processSingleProduct(
     matchResult.confidence
   );
 }
-
-// ── Main Orchestrator ──────────────────────────────────────
 
 async function main(): Promise<void> {
   updateScraperStatus("running");
@@ -327,131 +326,153 @@ async function main(): Promise<void> {
   logger.info("═══════════════════════════════════════════");
 
   const products = await readProductsCsv(config.inputCsvPath);
-  const outputPath = getOutputFilePath(config.outputDir);
   fs.mkdirSync(config.outputDir, { recursive: true });
 
-  let completedSkus = new Set<string>();
-  let activeRound = 1;
-
-  if (config.scraperMode === "fresh") {
-    // Delete existing output files for a clean start
-    const xlsxPath = outputPath.replace(/\.csv$/, ".xlsx");
-    if (fs.existsSync(outputPath)) {
-      fs.unlinkSync(outputPath);
-      logger.info(`🗑️ Fresh mode: deleted old output ${outputPath}`);
-    }
-    if (fs.existsSync(xlsxPath)) {
-      fs.unlinkSync(xlsxPath);
-      logger.info(`🗑️ Fresh mode: deleted old output ${xlsxPath}`);
-    }
-  } else {
-    const existingRows = await readExistingCsv(outputPath);
-    activeRound = getActiveRound(existingRows);
-    completedSkus = await loadCompletedSkus(outputPath, activeRound);
-  }
-
-  logger.info(`  Active Rd: Round ${activeRound}`);
-  logger.info("═══════════════════════════════════════════");
-
-  const pendingProducts = products.filter(p => !completedSkus.has(p.sku));
-
-  if (pendingProducts.length === 0) {
-    logger.info("Nothing to do.");
-    return;
-  }
+  const targets = config.scraperTarget === "all"
+    ? VALID_TARGETS_BY_CATEGORY[config.mappingCategory]
+    : [config.scraperTarget];
 
   const browserService = new BrowserService(config.proxyUrl);
   setupGracefulShutdown(browserService);
-
   await browserService.initialize();
   const page = await browserService.newPage();
 
-  let searchService;
-  if (config.scraperTarget === "jbhifi") {
-    searchService = new JbHifiSearchService(config.jbhifiDomain, config.maxSearchResults);
-  } else if (config.scraperTarget === "phonebot") {
-    searchService = new PhonebotSearchService(config.phonebotDomain, config.maxSearchResults);
-  } else if (config.scraperTarget === "kogan") {
-    searchService = new KoganSearchService(config.koganDomain, config.maxSearchResults);
-  } else if (config.scraperTarget === "reebelo") {
-    searchService = new ReebeloSearchService(config.reebeloDomain, config.maxSearchResults);
-  } else if (config.scraperTarget === "backmarket") {
-    searchService = new BackmarketSearchService(config.backmarketDomain, config.maxSearchResults);
-  } else if (config.scraperTarget === "mobileciti") {
-    searchService = new MobilecitiSearchService(config.mobilecitiDomain, config.maxSearchResults);
-  } else if (config.scraperTarget === "buymobile") {
-    searchService = new BuymobileSearchService(config.buymobileDomain, config.maxSearchResults);
-  } else if (config.scraperTarget === "spectronic") {
-    searchService = new SpectronicSearchService(config.spectronicDomain, config.maxSearchResults);
-  } else if (config.scraperTarget === "bestmobilephone") {
-    searchService = new BestmobilephoneSearchService(config.bestmobilephoneDomain, config.maxSearchResults);
-  } else if (config.scraperTarget === "scorptec") {
-    searchService = new ScorptecSearchService(config.scorptecDomain, config.maxSearchResults);
-  } else if (config.scraperTarget === "centrecom") {
-    searchService = new CentrecomSearchService(config.centrecomDomain, config.maxSearchResults);
-  } else if (config.scraperTarget === "digidirect") {
-    searchService = new DigidirectSearchService(config.digidirectDomain, config.maxSearchResults);
-  } else if (config.scraperTarget === "georges") {
-    searchService = new GeorgesSearchService(config.georgesDomain, config.maxSearchResults);
-  } else {
-    searchService = new AmazonSearchService(config.amazonDomain, config.maxSearchResults);
-  }
-    
-  const matcherService = new GeminiMatcherService(config.geminiApiKeys, config.mappingCategory, config.scraperTarget);
-
-  for (let i = 0; i < pendingProducts.length; i++) {
+  for (const target of targets) {
     if (isShuttingDown) break;
 
-    const product = pendingProducts[i];
-    const progress = `[${i + 1}/${pendingProducts.length}]`;
+    // Set process.env.SCRAPER_TARGET for other services (csv-writer etc)
+    process.env.SCRAPER_TARGET = target;
 
-    logger.info(`${progress} Processing: ${product.productName}`);
+    logger.info("═══════════════════════════════════════════");
+    logger.info(`🚀 Starting Target: ${target.toUpperCase()}`);
+    logger.info("═══════════════════════════════════════════");
 
-    try {
-      const result = await processSingleProduct(product, searchService, matcherService, page);
-      await appendResultRow(outputPath, result, activeRound);
+    const outputPath = getOutputFilePath(config.outputDir);
+    let completedSkus = new Set<string>();
+    let activeRound = 1;
 
-      const statusEmoji = result.status === "matched" ? "✅" : "❌";
-      const priceLog = result.amazonPrice ? ` — A$${result.amazonPrice}` : "";
-      logger.info(`${progress} ${statusEmoji} ${result.status}${priceLog}`);
-    } catch (error) {
-      const errorMessage = (error as Error).message;
-      if (errorMessage === "CAPTCHA_DETECTED") {
-        logger.error("CAPTCHA detected! Waiting 60s...");
-        await randomDelay(60000, 90000);
-        i--; continue;
+    if (config.scraperMode === "fresh") {
+      const xlsxPath = outputPath.replace(/\.csv$/, ".xlsx");
+      if (fs.existsSync(outputPath)) {
+        fs.unlinkSync(outputPath);
+        logger.info(`🗑️ Fresh mode: deleted old output ${outputPath}`);
       }
-      // Write error result to CSV so output file always has data
-      const errorResult = buildErrorResult(product, errorMessage);
-      await appendResultRow(outputPath, errorResult, activeRound);
-      logger.error(`${progress} ⚠️ Error: ${errorMessage}`);
+      if (fs.existsSync(xlsxPath)) {
+        fs.unlinkSync(xlsxPath);
+        logger.info(`🗑️ Fresh mode: deleted old output ${xlsxPath}`);
+      }
+    } else {
+      const existingRows = await readExistingCsv(outputPath);
+      activeRound = getActiveRound(existingRows);
+      completedSkus = await loadCompletedSkus(outputPath, activeRound);
+    }
 
-      if (errorMessage === "ALL_GEMINI_KEYS_EXHAUSTED") {
-        updateScraperStatus("paused", "ALL_GEMINI_KEYS_EXHAUSTED");
-        await waitForNewGeminiKeys(matcherService, matcherService.getApiKeys());
-        i--; // Retry the same product
-        continue;
+    const pendingProducts = products.filter(p => !completedSkus.has(p.sku));
+    if (pendingProducts.length === 0) {
+      logger.info(`Nothing to do for target: ${target}`);
+      continue;
+    }
+
+    let searchService;
+    if (target === "jbhifi") {
+      searchService = new JbHifiSearchService(config.jbhifiDomain, config.maxSearchResults);
+    } else if (target === "phonebot") {
+      searchService = new PhonebotSearchService(config.phonebotDomain, config.maxSearchResults);
+    } else if (target === "kogan") {
+      searchService = new KoganSearchService(config.koganDomain, config.maxSearchResults);
+    } else if (target === "reebelo") {
+      searchService = new ReebeloSearchService(config.reebeloDomain, config.maxSearchResults);
+    } else if (target === "backmarket") {
+      searchService = new BackmarketSearchService(config.backmarketDomain, config.maxSearchResults);
+    } else if (target === "mobileciti") {
+      searchService = new MobilecitiSearchService(config.mobilecitiDomain, config.maxSearchResults);
+    } else if (target === "buymobile") {
+      searchService = new BuymobileSearchService(config.buymobileDomain, config.maxSearchResults);
+    } else if (target === "spectronic") {
+      searchService = new SpectronicSearchService(config.spectronicDomain, config.maxSearchResults);
+    } else if (target === "bestmobilephone") {
+      searchService = new BestmobilephoneSearchService(config.bestmobilephoneDomain, config.maxSearchResults);
+    } else if (target === "scorptec") {
+      searchService = new ScorptecSearchService(config.scorptecDomain, config.maxSearchResults);
+    } else if (target === "centrecom") {
+      searchService = new CentrecomSearchService(config.centrecomDomain, config.maxSearchResults);
+    } else if (target === "digidirect") {
+      searchService = new DigidirectSearchService(config.digidirectDomain, config.maxSearchResults);
+    } else if (target === "georges") {
+      searchService = new GeorgesSearchService(config.georgesDomain, config.maxSearchResults);
+    } else {
+      searchService = new AmazonSearchService(config.amazonDomain, config.maxSearchResults);
+    }
+
+    // Load gemini keys for this specific target
+    const targetKeys = reloadGeminiKeys(target);
+    const matcherService = new GeminiMatcherService(targetKeys, config.mappingCategory, target);
+
+    for (let i = 0; i < pendingProducts.length; i++) {
+      if (isShuttingDown) break;
+
+      const product = pendingProducts[i];
+      const progress = `[${i + 1}/${pendingProducts.length}]`;
+
+      logger.info(`${progress} [${target}] Processing: ${product.productName}`);
+
+      try {
+        const result = await processSingleProduct(product, searchService, matcherService, page, target);
+        await appendResultRow(outputPath, result, activeRound);
+
+        const statusEmoji = result.status === "matched" ? "✅" : "❌";
+        const priceLog = result.amazonPrice ? ` — A$${result.amazonPrice}` : "";
+        logger.info(`${progress} [${target}] ${statusEmoji} ${result.status}${priceLog}`);
+      } catch (error) {
+        const errorMessage = (error as Error).message;
+        if (errorMessage === "CAPTCHA_DETECTED") {
+          logger.error("CAPTCHA detected! Waiting 60s...");
+          await randomDelay(60000, 90000);
+          i--; continue;
+        }
+        // Write error result to CSV so output file always has data
+        const errorResult = buildErrorResult(product, errorMessage);
+        await appendResultRow(outputPath, errorResult, activeRound);
+        logger.error(`${progress} [${target}] ⚠️ Error: ${errorMessage}`);
+
+        if (errorMessage === "ALL_GEMINI_KEYS_EXHAUSTED") {
+          updateScraperStatus("paused", "ALL_GEMINI_KEYS_EXHAUSTED");
+          await waitForNewGeminiKeys(matcherService, matcherService.getApiKeys(), target);
+          i--; // Retry the same product
+          continue;
+        }
+      }
+
+      if (i < pendingProducts.length - 1 && !isShuttingDown) {
+        await randomDelay(config.requestDelayMinMs, config.requestDelayMaxMs);
       }
     }
 
-    if (i < pendingProducts.length - 1 && !isShuttingDown) {
-      await randomDelay(config.requestDelayMinMs, config.requestDelayMaxMs);
+    // Navigate to blank to clear state before the next target
+    try {
+      await page.goto("about:blank");
+    } catch {
+      // Ignore if page navigation fails on transition
+    }
+
+    try {
+      const { convertCsvToExcel } = await import("./utils/excel-writer.js");
+      await convertCsvToExcel(outputPath);
+    } catch (e) {
+      logger.error(`Failed to generate Excel on complete for ${target}: ${(e as Error).message}`);
     }
   }
 
   await browserService.shutdown();
   clearScraperStatus();
-  logger.info(`Done! Results: ${outputPath}`);
-
-  try {
-    const { convertCsvToExcel } = await import("./utils/excel-writer.js");
-    await convertCsvToExcel(outputPath);
-  } catch (e) {
-    logger.error(`Failed to generate Excel on complete: ${(e as Error).message}`);
-  }
+  logger.info(`Done! All targets finished.`);
 }
 
 main().catch(err => {
   logger.error(`Fatal: ${err.message}`);
   process.exit(1);
 });
+
+
+
+
