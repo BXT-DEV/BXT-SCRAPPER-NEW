@@ -12,6 +12,7 @@
     "scrape:dry-run": "tsx src/index.ts --dry-run",
     "config": "tsx src/config-ui.ts",
     "credentials": "tsx src/scripts/manage-credentials.ts",
+    "check": "tsx src/scripts/check-results.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "package": "pkg . --targets node18-win-x64,node18-macos-x64 --out-path bin"

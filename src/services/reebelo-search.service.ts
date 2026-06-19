@@ -9,6 +9,7 @@ import { logger } from "../utils/logger.js";
 import { randomDelay } from "../utils/delay.js";
 import { extractSpecs, getBroadSearchQuery } from "../utils/product-utils.js";
 import { loadRules } from "../utils/rules-manager.js";
+import { validateProductMatch } from "../utils/result-validator.js";
 
 export class ReebeloSearchService {
   private readonly domain: string;
@@ -275,10 +276,8 @@ export class ReebeloSearchService {
 
     // Select all variants using the existing full flow
     try {
-      const { price, cleanUrl } = await this.selectVariantsAndGetPrice(
-        page,
-        product,
-      );
+      const { price, cleanUrl, pageDocTitle } =
+        await this.selectVariantsAndGetPrice(page, product);
 
       // Read the final page title after variant selection
       const pageTitle =
@@ -291,6 +290,18 @@ export class ReebeloSearchService {
             .filter(Boolean)
             .join(" - ");
         })) || validResult.title;
+
+      // ── Guard: reject obvious spec mismatches ───────────────────
+      // Use document.title (most specific) → fall back to search-result card title.
+      // The guard only fires when BOTH sides have explicit storage that disagrees.
+      const titleForGuard = pageDocTitle || validResult.title;
+      const guard = validateProductMatch(product.productName, titleForGuard);
+      if (!guard.isValid) {
+        logger.warn(
+          `  ✗ [Guard] ${guard.reason} | title: "${titleForGuard}" | url: ${cleanUrl}`,
+        );
+        return null; // treat as no_match — prevents saving wrong variant
+      }
 
       return { url: cleanUrl, title: pageTitle, price };
     } catch (error) {
@@ -306,7 +317,7 @@ export class ReebeloSearchService {
   async selectVariantsAndGetPrice(
     page: Page,
     product: BecexProduct,
-  ): Promise<{ price: number | null; cleanUrl: string }> {
+  ): Promise<{ price: number | null; cleanUrl: string; pageDocTitle: string }> {
     logger.info(`Selecting Reebelo variants for: ${product.productName}`);
     await randomDelay(2000, 3000);
 
@@ -462,7 +473,11 @@ export class ReebeloSearchService {
       return null;
     });
 
-    return { price, cleanUrl: page.url() };
+    // Read document.title — on Reebelo it typically contains the selected variant
+    // (e.g. "iPhone 12 Pro Max 512GB Silver - Reebelo") and is used by the guard.
+    const pageDocTitle = (await page.evaluate(() => document.title)) || "";
+
+    return { price, cleanUrl: page.url(), pageDocTitle };
   }
 
   /**
