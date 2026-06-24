@@ -196,6 +196,8 @@ export function extractSpecs(name: string): {
   storage: string[];
   colors: string[];
   connectivity: string[];
+  ram: string[];
+  cpu: string[];
 } {
   // ── Storage ──────────────────────────────────────────
   const storageMatches = name.match(/\b(\d+)\s*(GB|TB|MB)\b/gi) || [];
@@ -242,9 +244,33 @@ export function extractSpecs(name: string): {
     return regex.test(name);
   });
 
+  // ── RAM ──────────────────────────────────────────────
+  const ramMatches = name.match(/\b(\d+)\s*(?:GB\s*RAM|RAM)\b/gi) || [];
+  const ramVariants: string[] = [];
+  for (const raw of ramMatches) {
+    const match = raw.match(/(\d+)\s*(?:GB\s*RAM|RAM)/i);
+    if (match) {
+      const num = match[1];
+      ramVariants.push(`${num}GB`);
+      ramVariants.push(`${num} GB`);
+    }
+  }
+
+  // ── CPU / Chip ──────────────────────────────────────
+  const cpuKeywords = ["M1", "M2", "M3", "M4", "M5", "i3", "i5", "i7", "i9"];
+  const foundCpu: string[] = [];
+  for (const cpu of cpuKeywords) {
+    const regex = new RegExp(`\\b${cpu}\\b`, "i");
+    if (regex.test(name)) {
+      foundCpu.push(cpu);
+    }
+  }
+
   return {
     storage: storageVariants,
     colors: foundColors,
-    connectivity: foundConnectivity
+    connectivity: foundConnectivity,
+    ram: ramVariants,
+    cpu: foundCpu
   };
 }

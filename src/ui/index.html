@@ -314,6 +314,69 @@
             align-items: center;
             gap: 0.5rem;
         }
+
+        /* ── Validate Result Tab ─────────────────────────────── */
+        .validate-progress-bar-wrap {
+            background: rgba(255,255,255,0.06);
+            border-radius: 99px;
+            height: 10px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        .validate-progress-bar {
+            height: 100%;
+            border-radius: 99px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            transition: width 0.4s ease;
+            width: 0%;
+        }
+        .validate-stats {
+            display: flex; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;
+        }
+        .validate-stat {
+            display: flex; flex-direction: column; align-items: center;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem; padding: 0.75rem 1.5rem; min-width: 90px;
+        }
+        .validate-stat-value {
+            font-size: 1.8rem; font-weight: 700;
+        }
+        .validate-stat-label {
+            font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .validate-results-list {
+            display: flex; flex-direction: column; gap: 0.6rem;
+            max-height: 480px; overflow-y: auto;
+        }
+        .vr-item {
+            display: flex; flex-direction: column; gap: 0.25rem;
+            padding: 0.9rem 1rem;
+            border-radius: 0.75rem;
+            border-left: 4px solid transparent;
+            background: var(--input-bg);
+            font-size: 0.88rem;
+            animation: fadeIn 0.3s ease;
+        }
+        .vr-item.valid   { border-color: var(--success); }
+        .vr-item.mismatch{ border-color: #ef4444; }
+        .vr-item.error   { border-color: #f59e0b; }
+        .vr-item-header  { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+        .vr-item-sub     { color: var(--text-muted); font-size: 0.82rem; padding-left: 1.4rem; }
+        .vr-badge {
+            font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.6rem;
+            border-radius: 99px; white-space: nowrap;
+        }
+        .vr-badge.valid    { background: rgba(16,185,129,0.15); color: var(--success); }
+        .vr-badge.mismatch { background: rgba(239,68,68,0.15); color: #ef4444; }
+        .vr-badge.error    { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        .validate-concurrency { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+        .validate-concurrency label { font-size: 0.9rem; color: #e2e8f0; white-space: nowrap; }
+        .validate-concurrency input {
+            width: 70px; padding: 0.5rem 0.75rem;
+            background: var(--input-bg); border: 1px solid var(--border-color);
+            border-radius: 0.5rem; color: white; text-align: center; font-size: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -327,6 +390,7 @@
             <button class="tab-btn active" id="config-tab-btn" onclick="switchTab('config-tab')">⚙️ Configuration</button>
             <button class="tab-btn" id="rules-tab-btn" onclick="switchTab('rules-tab')">📊 Mapping Rules</button>
             <button class="tab-btn" id="cost-tab-btn" onclick="switchTab('cost-tab')">💰 API Cost Tracking</button>
+            <button class="tab-btn" id="validate-tab-btn" onclick="switchTab('validate-tab')">✅ Validate Result</button>
         </div>
 
         <div id="config-tab" class="tab-content active">
@@ -420,6 +484,97 @@
                 </p>
                 <div class="output-list" id="costList">
                     <div class="empty-state">Loading cost data...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Validate Result Tab -->
+        <div id="validate-tab" class="tab-content">
+
+            <!-- Upload Card -->
+            <div class="card">
+                <div class="card-title"><span class="icon">📂</span> Upload XLSX Result File</div>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                    Upload file <strong>.xlsx</strong> hasil scrapping. Playwright akan membuka setiap URL dan memverifikasi apakah judul produk di halaman masih cocok.
+                </p>
+
+                <div class="upload-zone" id="validateUploadZone">
+                    <input type="file" id="validateFileInput" accept=".xlsx">
+                    <div class="upload-icon">📊</div>
+                    <div class="upload-title" id="validateUploadTitle">Click atau drag file .xlsx ke sini</div>
+                    <div class="upload-hint">Hanya mendukung file .xlsx hasil scrapping</div>
+                </div>
+                <div class="file-info" id="validateFileInfo">
+                    <span class="file-name" id="validateFileName"></span>
+                    <button class="file-remove" id="validateFileRemove" title="Remove">✕</button>
+                </div>
+                <div id="validateRowCount" style="margin-top: 0.75rem; font-size: 0.9rem; color: var(--text-muted);"></div>
+            </div>
+
+            <!-- Settings & Start -->
+            <div class="card">
+                <div class="card-title"><span class="icon">🔍</span> Validation Settings</div>
+                <div class="validate-concurrency">
+                    <label for="validateConcurrency">Jumlah tab browser bersamaan:</label>
+                    <input type="number" id="validateConcurrency" min="1" max="10" value="3">
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button id="validateStartBtn" class="btn btn-primary" style="flex: 2; background: var(--purple); box-shadow: 0 4px 14px 0 var(--purple-glow);" disabled>
+                        <div class="spinner"></div>
+                        <span>🚀 Mulai Validasi</span>
+                    </button>
+                    <button id="validateStopBtn" class="btn" style="flex: 1; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); display: none;">
+                        🛑 Stop
+                    </button>
+                </div>
+                <div id="validateStatusMsg" style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);"></div>
+            </div>
+
+            <!-- Live Progress & Results -->
+            <div class="card" id="validateResultsCard" style="display: none;">
+                <div class="card-title"><span class="icon">📊</span> Hasil Validasi</div>
+
+                <!-- Stats -->
+                <div class="validate-stats">
+                    <div class="validate-stat">
+                        <div class="validate-stat-value" id="vStatTotal" style="color: var(--accent);">0</div>
+                        <div class="validate-stat-label">Total</div>
+                    </div>
+                    <div class="validate-stat">
+                        <div class="validate-stat-value" id="vStatChecked" style="color: var(--text-muted);">0</div>
+                        <div class="validate-stat-label">Diperiksa</div>
+                    </div>
+                    <div class="validate-stat">
+                        <div class="validate-stat-value" id="vStatValid" style="color: var(--success);">0</div>
+                        <div class="validate-stat-label">✅ Valid</div>
+                    </div>
+                    <div class="validate-stat">
+                        <div class="validate-stat-value" id="vStatMismatch" style="color: #ef4444;">0</div>
+                        <div class="validate-stat-label">❌ Mismatch</div>
+                    </div>
+                    <div class="validate-stat">
+                        <div class="validate-stat-value" id="vStatError" style="color: #f59e0b;">0</div>
+                        <div class="validate-stat-label">⚠️ Error</div>
+                    </div>
+                </div>
+
+                <!-- Progress bar -->
+                <div class="validate-progress-bar-wrap">
+                    <div class="validate-progress-bar" id="validateProgressBar"></div>
+                </div>
+                <div id="validateProgressLabel" style="text-align: right; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.5rem;">0 / 0</div>
+
+                <!-- Filter buttons -->
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                    <button onclick="filterResults('all')"    class="btn-download" id="vFilterAll"      style="background: rgba(59,130,246,0.15); color: var(--accent);">Semua</button>
+                    <button onclick="filterResults('valid')"  class="btn-download" id="vFilterValid"    style="background: rgba(16,185,129,0.1); color: var(--success);">✅ Valid</button>
+                    <button onclick="filterResults('mismatch')" class="btn-download" id="vFilterMismatch" style="background: rgba(239,68,68,0.1); color: #ef4444;">❌ Mismatch</button>
+                    <button onclick="filterResults('error')"  class="btn-download" id="vFilterError"   style="background: rgba(245,158,11,0.1); color: #f59e0b;">⚠️ Error</button>
+                </div>
+
+                <!-- Results list -->
+                <div class="validate-results-list" id="validateResultsList">
+                    <div class="empty-state">Belum ada hasil...</div>
                 </div>
             </div>
         </div>
@@ -1158,6 +1313,245 @@
             container.innerHTML = '<div class="empty-state">Failed to load cost statistics.</div>';
         }
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  VALIDATE RESULT TAB
+    // ═══════════════════════════════════════════════════════════════
+
+    // ── State ──
+    let validateAllResults = [];
+    let validateCurrentFilter = 'all';
+    let validatePollInterval = null;
+
+    // ── Upload Zone ──
+    const vUploadZone   = document.getElementById('validateUploadZone');
+    const vFileInput    = document.getElementById('validateFileInput');
+    const vFileInfo     = document.getElementById('validateFileInfo');
+    const vFileName     = document.getElementById('validateFileName');
+    const vFileRemove   = document.getElementById('validateFileRemove');
+    const vStartBtn     = document.getElementById('validateStartBtn');
+    const vStopBtn      = document.getElementById('validateStopBtn');
+    const vStatusMsg    = document.getElementById('validateStatusMsg');
+    const vResultsCard  = document.getElementById('validateResultsCard');
+
+    vUploadZone.addEventListener('click', () => vFileInput.click());
+    vUploadZone.addEventListener('dragover', (e) => { e.preventDefault(); vUploadZone.classList.add('dragover'); });
+    vUploadZone.addEventListener('dragleave', () => vUploadZone.classList.remove('dragover'));
+    vUploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        vUploadZone.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file && file.name.endsWith('.xlsx')) validateHandleFile(file);
+        else vStatusMsg.textContent = '⚠️ Hanya file .xlsx yang didukung.';
+    });
+    vFileInput.addEventListener('change', (e) => {
+        if (e.target.files[0]) validateHandleFile(e.target.files[0]);
+    });
+
+    vFileRemove.addEventListener('click', () => {
+        vFileInput.value = '';
+        vFileInfo.classList.remove('visible');
+        vUploadZone.classList.remove('upload-success');
+        document.getElementById('validateUploadTitle').textContent = 'Click atau drag file .xlsx ke sini';
+        document.getElementById('validateRowCount').textContent = '';
+        vStartBtn.disabled = true;
+        vStatusMsg.textContent = '';
+    });
+
+    async function validateHandleFile(file) {
+        document.getElementById('validateUploadTitle').textContent = 'Mengupload...';
+        vFileName.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+        vFileInfo.classList.add('visible');
+        vUploadZone.classList.add('upload-success');
+
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            const res = await fetch('/api/validate/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('validateUploadTitle').textContent = 'Upload berhasil!';
+                document.getElementById('validateRowCount').textContent =
+                    `✅ Ditemukan ${data.rowCount} baris siap divalidasi.`;
+                vStartBtn.disabled = false;
+                vStatusMsg.textContent = '';
+            } else {
+                throw new Error(data.error || 'Upload gagal');
+            }
+        } catch (err) {
+            document.getElementById('validateUploadTitle').textContent = 'Upload gagal!';
+            vUploadZone.classList.remove('upload-success');
+            vStatusMsg.textContent = '❌ ' + err.message;
+        }
+    }
+
+    // ── Start / Stop ──
+    vStartBtn.addEventListener('click', async () => {
+        const concurrency = parseInt(document.getElementById('validateConcurrency').value) || 3;
+        vStartBtn.classList.add('loading');
+        vStartBtn.querySelector('span').textContent = 'Memulai...';
+        vStartBtn.disabled = true;
+        vStatusMsg.textContent = '';
+
+        try {
+            const res = await fetch('/api/validate/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ concurrency })
+            });
+            const data = await res.json();
+            if (data.success) {
+                vStopBtn.style.display = 'block';
+                vResultsCard.style.display = 'block';
+                validateAllResults = [];
+                vStatusMsg.textContent = `🔄 Memvalidasi ${data.total} baris dengan ${data.concurrency} tab bersamaan...`;
+                vStatusMsg.style.color = 'var(--accent)';
+                startValidatePoll();
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (err) {
+            vStatusMsg.textContent = '❌ ' + err.message;
+            vStatusMsg.style.color = '#ef4444';
+        } finally {
+            vStartBtn.classList.remove('loading');
+            vStartBtn.querySelector('span').textContent = '🚀 Mulai Validasi';
+        }
+    });
+
+    vStopBtn.addEventListener('click', async () => {
+        try {
+            await fetch('/api/validate/stop', { method: 'POST' });
+            vStatusMsg.textContent = '🛑 Stop signal dikirim...';
+            vStatusMsg.style.color = '#f59e0b';
+        } catch (e) {
+            vStatusMsg.textContent = '❌ Gagal stop: ' + e.message;
+        }
+    });
+
+    // ── Live Polling ──
+    function startValidatePoll() {
+        if (validatePollInterval) clearInterval(validatePollInterval);
+        validatePollInterval = setInterval(pollValidateProgress, 2000);
+        pollValidateProgress(); // immediate first poll
+    }
+
+    async function pollValidateProgress() {
+        try {
+            const res = await fetch('/api/validate/progress');
+            const data = await res.json();
+            updateValidateUI(data);
+
+            if (data.state === 'done' || data.state === 'stopped') {
+                clearInterval(validatePollInterval);
+                validatePollInterval = null;
+                vStopBtn.style.display = 'none';
+                vStartBtn.disabled = false;
+                const msg = data.state === 'done'
+                    ? `✅ Selesai! ${data.valid} valid, ${data.mismatch} mismatch, ${data.error} error.`
+                    : `🛑 Dihentikan. ${data.checked}/${data.total} diperiksa.`;
+                vStatusMsg.textContent = msg;
+                vStatusMsg.style.color = data.state === 'done' ? 'var(--success)' : '#f59e0b';
+            }
+        } catch (e) {
+            console.error('Poll error', e);
+        }
+    }
+
+    function updateValidateUI(data) {
+        // Stats
+        document.getElementById('vStatTotal').textContent   = data.total;
+        document.getElementById('vStatChecked').textContent = data.checked;
+        document.getElementById('vStatValid').textContent   = data.valid;
+        document.getElementById('vStatMismatch').textContent= data.mismatch;
+        document.getElementById('vStatError').textContent   = data.error;
+
+        // Progress bar
+        const pct = data.total > 0 ? Math.round((data.checked / data.total) * 100) : 0;
+        document.getElementById('validateProgressBar').style.width = pct + '%';
+        document.getElementById('validateProgressLabel').textContent = `${data.checked} / ${data.total} (${pct}%)`;
+
+        // Merge new results (avoid duplicates by rowIndex)
+        const existingIndexes = new Set(validateAllResults.map(r => r.rowIndex));
+        let hasNew = false;
+        for (const r of (data.results || [])) {
+            if (!existingIndexes.has(r.rowIndex)) {
+                validateAllResults.push(r);
+                existingIndexes.add(r.rowIndex);
+                hasNew = true;
+            }
+        }
+
+        if (hasNew) renderValidateResults();
+    }
+
+    // ── Render Results ──
+    function renderValidateResults() {
+        const list = document.getElementById('validateResultsList');
+        const filtered = validateCurrentFilter === 'all'
+            ? validateAllResults
+            : validateAllResults.filter(r => r.status.toLowerCase() === validateCurrentFilter);
+
+        if (filtered.length === 0) {
+            list.innerHTML = '<div class="empty-state">Tidak ada hasil untuk filter ini.</div>';
+            return;
+        }
+
+        list.innerHTML = '';
+        // Show newest first for running state, but keep stable for done
+        const sorted = [...filtered].reverse();
+
+        sorted.forEach(r => {
+            const statusClass = r.status.toLowerCase();
+            const emoji = r.status === 'VALID' ? '✅' : r.status === 'MISMATCH' ? '❌' : '⚠️';
+            const item = document.createElement('div');
+            item.className = `vr-item ${statusClass}`;
+            item.innerHTML = `
+                <div class="vr-item-header">
+                    ${emoji}
+                    <span class="vr-badge ${statusClass}">${r.status}</span>
+                    <span style="flex:1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(r.sourceName || '—')}</span>
+                </div>
+                ${r.liveTitle ? `<div class="vr-item-sub">🔴 Live: ${escapeHtml(r.liveTitle)}</div>` : ''}
+                ${r.matchedTitle ? `<div class="vr-item-sub">📄 Scraped: ${escapeHtml(r.matchedTitle)}</div>` : ''}
+                <div class="vr-item-sub">💬 ${escapeHtml(r.reason)}</div>
+                <div class="vr-item-sub"><a href="${escapeHtml(r.url)}" target="_blank" style="color: var(--accent); text-decoration: none; font-size: 0.78rem;">${escapeHtml(r.url.substring(0, 80))}${r.url.length > 80 ? '…' : ''}</a></div>
+            `;
+            list.appendChild(item);
+        });
+    }
+
+    window.filterResults = function(filter) {
+        validateCurrentFilter = filter;
+        renderValidateResults();
+    };
+
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // ── Tab switch hook ── (extend existing switchTab)
+    const _origSwitchTab = window.switchTab;
+    window.switchTab = function(tabId) {
+        _origSwitchTab(tabId);
+        if (tabId === 'validate-tab') {
+            // Resume polling if validation is still running
+            if (!validatePollInterval) {
+                fetch('/api/validate/progress').then(r => r.json()).then(data => {
+                    if (data.state === 'running') {
+                        vResultsCard.style.display = 'block';
+                        vStopBtn.style.display = 'block';
+                        startValidatePoll();
+                    }
+                }).catch(() => {});
+            }
+        }
+    };
+
 </script>
 </body>
 </html>

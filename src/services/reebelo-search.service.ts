@@ -239,15 +239,25 @@ export class ReebeloSearchService {
 
     const storeRules = catRules?.stores?.reebelo;
 
-    // ── CORRECT ORDER: Storage → Color → Condition → Battery → SIM ──
+    // ── CORRECT ORDER: CPU → RAM → Storage → Color → Condition → Battery → SIM ──
     // Reebelo is nested: condition options only appear after storage+color are set.
 
-    // 1. Storage selection (must be first)
+    // 1. CPU selection
+    if (specs.cpu && specs.cpu.length > 0) {
+      await this.clickReebeloVariant(page, "cpu", specs.cpu, "CPU");
+    }
+
+    // 2. RAM selection
+    if (specs.ram && specs.ram.length > 0) {
+      await this.clickReebeloVariant(page, "ram", specs.ram, "RAM");
+    }
+
+    // 3. Storage selection
     if (specs.storage.length > 0) {
       await this.clickReebeloVariant(page, "storage", specs.storage, "Storage");
     }
 
-    // 2. Color selection (must be before condition)
+    // 4. Color selection (must be before condition)
     if (specs.colors.length > 0) {
       await this.clickReebeloVariant(page, "color", specs.colors, "Color");
     }
