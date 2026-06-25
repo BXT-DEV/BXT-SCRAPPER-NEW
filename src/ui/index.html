@@ -1514,6 +1514,8 @@
                 </div>
                 ${r.liveTitle ? `<div class="vr-item-sub">🔴 Live: ${escapeHtml(r.liveTitle)}</div>` : ''}
                 ${r.matchedTitle ? `<div class="vr-item-sub">📄 Scraped: ${escapeHtml(r.matchedTitle)}</div>` : ''}
+                ${r.spec ? `<div class="vr-item-sub">📐 Spec: <strong style="color: #60a5fa;">${escapeHtml(r.spec)}</strong></div>` : ''}
+                ${r.condition ? `<div class="vr-item-sub">✨ Condition: <strong style="color: #a78bfa;">${escapeHtml(r.condition)}</strong></div>` : ''}
                 <div class="vr-item-sub">💬 ${escapeHtml(r.reason)}</div>
                 <div class="vr-item-sub"><a href="${escapeHtml(r.url)}" target="_blank" style="color: var(--accent); text-decoration: none; font-size: 0.78rem;">${escapeHtml(r.url.substring(0, 80))}${r.url.length > 80 ? '…' : ''}</a></div>
             `;

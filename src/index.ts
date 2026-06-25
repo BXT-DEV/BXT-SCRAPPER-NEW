@@ -31,7 +31,7 @@ import { CentrecomSearchService } from "./services/centrecom-search.service.js";
 import { DigidirectSearchService } from "./services/digidirect-search.service.js";
 import { GeorgesSearchService } from "./services/georges-search.service.js";
 import { GeminiMatcherService } from "./services/gemini-matcher.service.js";
-import { getSmartSearchQuery, getBroadSearchQuery } from "./utils/product-utils.js";
+import { getSmartSearchQuery, getBroadSearchQuery, extractSpecs } from "./utils/product-utils.js";
 import type { BecexProduct, ScrapedResult, AmazonSearchResult, DetailedCandidate, ScraperTarget } from "./types/index.js";
 import fs from "fs";
 import type { Page } from "playwright";
@@ -72,7 +72,9 @@ function buildMatchedResult(
   amazonUrl: string,
   amazonTitle: string,
   amazonPrice: number | null,
-  confidence: number
+  confidence: number,
+  spec?: string,
+  condition?: string
 ): ScrapedResult {
   return {
     sku: product.sku,
@@ -83,6 +85,8 @@ function buildMatchedResult(
     matchConfidence: confidence,
     status: "matched",
     errorMessage: "",
+    spec,
+    condition,
   };
 }
 
@@ -251,7 +255,29 @@ async function processSingleProduct(
     if (!directMatch) {
       return buildNoMatchResult(product);
     }
-    return buildMatchedResult(product, directMatch.url, directMatch.title, directMatch.price, 1.0);
+    const specs = extractSpecs(directMatch.title);
+    const specStr = [
+      specs.cpu.join(", "),
+      specs.ram.join(", "),
+      specs.storage.join(", "),
+      specs.colors.join(", "),
+      specs.connectivity.join(", ")
+    ].filter(Boolean).join(" | ") || "No specs detected";
+
+    let conditionStr = "Brand New";
+    const titleLower = directMatch.title.toLowerCase();
+    if (titleLower.includes("refurbished") || titleLower.includes("renewed") || directMatch.url.toLowerCase().includes("refurbished") || directMatch.url.toLowerCase().includes("backmarket") || directMatch.url.toLowerCase().includes("reebelo") || directMatch.url.toLowerCase().includes("phonebot")) {
+      if (titleLower.includes("pristine") || titleLower.includes("like new")) {
+        conditionStr = "Pristine";
+      } else if (titleLower.includes("excellent") || titleLower.includes("very good")) {
+        conditionStr = "Excellent";
+      } else if (titleLower.includes("good")) {
+        conditionStr = "Good";
+      } else {
+        conditionStr = "Refurbished";
+      }
+    }
+    return buildMatchedResult(product, directMatch.url, directMatch.title, directMatch.price, 1.0, specStr, conditionStr);
   }
 
   // Standard path: AI-powered candidate evaluation (for stores without nested variants)
@@ -304,12 +330,38 @@ async function processSingleProduct(
     }
   }
 
+  const finalTitle = matchedResult.title;
+  const specs = extractSpecs(finalTitle);
+  const specStr = [
+    specs.cpu.join(", "),
+    specs.ram.join(", "),
+    specs.storage.join(", "),
+    specs.colors.join(", "),
+    specs.connectivity.join(", ")
+  ].filter(Boolean).join(" | ") || "No specs detected";
+
+  let conditionStr = "Brand New";
+  const titleLower = finalTitle.toLowerCase();
+  if (titleLower.includes("refurbished") || titleLower.includes("renewed") || cleanUrl.toLowerCase().includes("refurbished") || cleanUrl.toLowerCase().includes("backmarket") || cleanUrl.toLowerCase().includes("reebelo") || cleanUrl.toLowerCase().includes("phonebot")) {
+    if (titleLower.includes("pristine") || titleLower.includes("like new")) {
+      conditionStr = "Pristine";
+    } else if (titleLower.includes("excellent") || titleLower.includes("very good")) {
+      conditionStr = "Excellent";
+    } else if (titleLower.includes("good")) {
+      conditionStr = "Good";
+    } else {
+      conditionStr = "Refurbished";
+    }
+  }
+
   return buildMatchedResult(
     product,
     cleanUrl,
-    matchedResult.title,
+    finalTitle,
     price,
-    matchResult.confidence
+    matchResult.confidence,
+    specStr,
+    conditionStr
   );
 }
 

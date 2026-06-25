@@ -166,6 +166,8 @@ export async function appendResultRow(
       existingRow["match_confidence"] = result.matchConfidence.toString();
       existingRow["status"] = result.status;
       existingRow["error_message"] = result.errorMessage;
+      existingRow["spec"] = result.spec || "";
+      existingRow["condition"] = result.condition || "";
     } else {
       const newRow: Record<string, string> = {
         "SKU": result.sku,
@@ -177,6 +179,8 @@ export async function appendResultRow(
         "match_confidence": result.matchConfidence.toString(),
         "status": result.status,
         "error_message": result.errorMessage,
+        "spec": result.spec || "",
+        "condition": result.condition || "",
       };
       rows.push(newRow);
     }
@@ -202,7 +206,7 @@ export async function appendResultRow(
     for (let r = 1; r <= maxRound; r++) {
       headers.push(`link_round${r}`);
     }
-    headers.push("amazon_price", "amazon_title", "match_confidence", "status", "error_message");
+    headers.push("amazon_price", "amazon_title", "match_confidence", "status", "error_message", "spec", "condition");
 
     const escapeField = (val: string | number | null): string => {
       const str = String(val ?? "");

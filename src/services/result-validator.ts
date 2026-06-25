@@ -11,6 +11,7 @@ import { readFileSync } from "fs";
 import path from "path";
 import { logger } from "../utils/logger.js";
 import { GeminiMatcherService } from "./gemini-matcher.service.js";
+import { extractSpecs } from "../utils/product-utils.js";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -29,6 +30,8 @@ export interface ValidationResult extends ValidationRow {
   liveTitle: string;
   reason: string;
   checkedAt: string;
+  spec: string;
+  condition: string;
 }
 
 export interface ValidationProgress {
@@ -50,11 +53,19 @@ const COLUMN_ALIASES = {
     "Product Name",
     "BXT Product Name",
     "Source Name",
-    "Source",
     "ProductName",
     "product_name",
   ],
   matchedTitle: [
+    // Actual scraper output columns first
+    "amazon_title",
+    "jbhifi_title",
+    "kogan_title",
+    "reebelo_title",
+    "backmarket_title",
+    "phonebot_title",
+    "mobileciti_title",
+    // Generic fallbacks
     "Matched Title",
     "Title",
     "Competitor Title",
@@ -63,10 +74,13 @@ const COLUMN_ALIASES = {
     "MatchedTitle",
   ],
   url: [
+    // Actual scraper output columns first
+    "link",
+    "link_round1",
+    // Generic fallbacks
     "Matched URL",
     "URL",
     "Competitor URL",
-    "Link",
     "Product URL",
     "MatchedURL",
     "matched_url",
@@ -100,22 +114,37 @@ export function parseXlsxRows(filePath: string): ValidationRow[] {
 
   const rows: ValidationRow[] = [];
 
+  let skipped = 0;
+
   for (let i = 0; i < rawRows.length; i++) {
     const raw = rawRows[i];
     const url = resolveColumn(raw, COLUMN_ALIASES.url);
+    const status = String(raw["status"] || "").trim().toLowerCase();
 
     // Skip rows without a URL — nothing to validate
-    if (!url || !url.startsWith("http")) continue;
+    if (!url || !url.startsWith("http")) { skipped++; continue; }
+
+    // Skip rows that were not successfully matched by the scraper
+    if (status && status !== "matched" && status !== "success") { skipped++; continue; }
+
+    // Auto-detect store from URL hostname if no explicit store column
+    let store = resolveColumn(raw, COLUMN_ALIASES.store);
+    if (!store && url) {
+      try {
+        store = new URL(url).hostname.replace(/^www\./, "").split(".")[0];
+      } catch { store = "unknown"; }
+    }
 
     rows.push({
       rowIndex: i + 2, // 1-indexed + header row
       sourceName: resolveColumn(raw, COLUMN_ALIASES.sourceName),
       matchedTitle: resolveColumn(raw, COLUMN_ALIASES.matchedTitle),
       url,
-      store: resolveColumn(raw, COLUMN_ALIASES.store),
+      store,
     });
   }
 
+  logger.info(`[Validator] Parsed xlsx: ${rows.length} rows to validate, ${skipped} skipped (no URL / not matched)`);
   return rows;
 }
 
@@ -214,6 +243,31 @@ export class ResultValidatorService {
 
             const liveTitle = await fetchLiveTitle(page, row.url);
 
+            // Extract specs & condition from live title & page
+            const specs = extractSpecs(liveTitle);
+            const specStr = [
+              specs.cpu.join(", "),
+              specs.ram.join(", "),
+              specs.storage.join(", "),
+              specs.colors.join(", "),
+              specs.connectivity.join(", ")
+            ].filter(Boolean).join(" | ") || "No specs detected";
+
+            // Detect condition from title or URL or fallback to source sku mapping
+            let conditionStr = "Brand New";
+            const liveTitleLower = liveTitle.toLowerCase();
+            if (liveTitleLower.includes("refurbished") || liveTitleLower.includes("renewed") || row.url.toLowerCase().includes("refurbished") || row.url.toLowerCase().includes("backmarket") || row.url.toLowerCase().includes("reebelo") || row.url.toLowerCase().includes("phonebot")) {
+              if (liveTitleLower.includes("pristine") || liveTitleLower.includes("like new")) {
+                conditionStr = "Pristine / Like New";
+              } else if (liveTitleLower.includes("excellent") || liveTitleLower.includes("very good")) {
+                conditionStr = "Excellent / Very Good";
+              } else if (liveTitleLower.includes("good")) {
+                conditionStr = "Good";
+              } else {
+                conditionStr = "Refurbished";
+              }
+            }
+
             // Use local matcher for fast, offline verification
             const { passed, reason } = this.matcher.verifyMatchConsistency(
               row.sourceName,
@@ -226,6 +280,8 @@ export class ResultValidatorService {
               liveTitle,
               reason,
               checkedAt: new Date().toISOString(),
+              spec: specStr,
+              condition: conditionStr,
             };
           } catch (e) {
             result = {
@@ -234,6 +290,8 @@ export class ResultValidatorService {
               liveTitle: "",
               reason: (e as Error).message,
               checkedAt: new Date().toISOString(),
+              spec: "",
+              condition: "",
             };
           } finally {
             if (context) {

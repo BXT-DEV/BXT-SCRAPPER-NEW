@@ -48,6 +48,8 @@ export interface ScrapedResult {
   matchConfidence: number;
   status: "matched" | "no_match" | "error";
   errorMessage: string;
+  spec?: string;
+  condition?: string;
 }
 
 export interface AmazonProductDetails {
