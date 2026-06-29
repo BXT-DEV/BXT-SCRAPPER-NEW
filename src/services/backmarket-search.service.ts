@@ -543,8 +543,6 @@ export class BackmarketSearchService {
     if (specs.colors.length > 0) {
       await this.clickVariantByText(page, specs.colors);
     }
-
-    // 4. Connectivity selection
     if (specs.connectivity.length > 0) {
       await this.clickVariantByText(page, specs.connectivity);
     }
@@ -553,18 +551,59 @@ export class BackmarketSearchService {
     if (storeRules?.simPolicy === "Physical Only") {
       const simSuccess = await this.clickVariantByText(page, ["Physical SIM", "Dual SIM", "Nano-SIM"]);
       if (!simSuccess) {
-         const isEsimOnly = await page.evaluate(() => {
-           const title = document.querySelector('h1')?.innerText || '';
-           return title.toLowerCase().includes('esim');
-         });
-         if (isEsimOnly) {
-           throw new Error("REQUIRED_VARIANT_NOT_FOUND: Physical SIM (Listing title indicates eSIM only)");
-         }
+        // Enhanced detection for Physical SIM, including combined Physical SIM + eSIM options.
+        const supportsPhysicalSim = await page.evaluate(() => {
+          // Look at the technical specs section
+          const specsContainer = document.querySelector('[data-id="seo-technical-specs"]');
+          if (specsContainer) {
+            const text = specsContainer.textContent || '';
+            // Match various ways the page may describe physical SIM support
+            if (/Physical SIM\s*\+\s*eSIM|Physical SIM|Dual SIM|Nano-SIM|Dual SIM\s*\(Physical.*eSIM\)/i.test(text)) {
+              return true;
+            }
+          }
+          // Fallback to checking the entire page body text
+          const bodyText = document.body.innerText || '';
+          const lowered = bodyText.toLowerCase();
+          if (lowered.includes('physical sim') || lowered.includes('nano-sim') || lowered.includes('dual sim')) {
+            return true;
+          }
+          // Also check title for combined SIM phrasing
+          const title = document.querySelector('h1')?.innerText || '';
+          if (/Physical SIM\s*\+\s*eSIM/i.test(title)) {
+            return true;
+          }
+          return false;
+        });
+
+        if (!supportsPhysicalSim) {
+          const isEsimOnly = await page.evaluate(() => {
+            const title = document.querySelector('h1')?.innerText || '';
+            return title.toLowerCase().includes('esim');
+          });
+          if (isEsimOnly) {
+            throw new Error("REQUIRED_VARIANT_NOT_FOUND: Physical SIM (Listing title indicates eSIM only)");
+          } else {
+            throw new Error("REQUIRED_VARIANT_NOT_FOUND: Physical SIM (No physical SIM support detected on page)");
+          }
+        }
       }
     }
 
     await randomDelay(1000, 2000);
 
+    // Ensure the URL reflects the selected variant (Backmarket adds query params after picker interaction)
+    try {
+      await page.waitForFunction(() => {
+        const href = window.location.href;
+        return href.includes('variantClicked') && href.includes('pickerClicked');
+      }, { timeout: 10000 });
+    } catch (_) {
+      // If the URL does not change within the timeout, continue with whatever URL is present.
+    }
+
+    // Log final URL after variant selection
+    logger.info(`Final product URL after variant selection: ${page.url()}`);
     const price = await page.evaluate(() => {
       const priceSelectors = [
         '[data-qa="productpage-product-price"]',
@@ -590,18 +629,38 @@ export class BackmarketSearchService {
       for (const text of texts) {
         // Try multiple ways to find the button/label
         const selectors = [
+          // 1. Proactive picker-specific selectors to avoid matching reviews/header elements
+          page.locator(`[data-test*="group-"] label:has-text("${text}")`),
+          page.locator(`[role="radiogroup"] label:has-text("${text}")`),
+          page.locator(`[data-qa="heading-grades"] label:has-text("${text}")`),
+          page.locator(`fieldset label:has-text("${text}")`),
+          
+          // 2. Fallbacks inside picker containers
+          page.locator(`[data-test*="group-"] :has-text("${text}")`),
+          page.locator(`[role="radiogroup"] :has-text("${text}")`),
+          page.locator(`fieldset :has-text("${text}")`),
+          
+          // 3. Page-wide inputs/labels (still better than generic spans/divs)
+          page.locator(`label:has-text("${text}") input`),
+          page.locator(`label:has-text("${text}")`),
           page.getByRole('button', { name: new RegExp(`^${text}$`, 'i') }),
+          
+          // 4. Last resort generic page-wide selectors
+          page.locator(`li:has-text("${text}")`),
           page.getByText(text, { exact: true }),
           page.locator(`button:has-text("${text}")`),
-          page.locator(`label:has-text("${text}")`),
           page.locator(`span:has-text("${text}")`),
         ];
 
         for (const selector of selectors) {
-          if (await selector.isVisible()) {
-            await selector.click({ force: true });
-            await randomDelay(1000, 2000);
-            return true;
+          try {
+            if (await selector.first().isVisible()) {
+              await selector.first().click({ force: true });
+              await randomDelay(1000, 2000);
+              return true;
+            }
+          } catch (_) {
+            // Ignore strict mode or visibility checking errors for a specific selector and try the next one
           }
         }
       }

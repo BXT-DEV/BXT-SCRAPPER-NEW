@@ -282,27 +282,103 @@ async function processSingleProduct(
 
   // ── No-AI fast path: take first search result directly ─────────────
   if (config.noAi) {
-    logger.info(`[NO_AI] Skipping AI matching — using top search result directly`);
-    const topResult = searchResults[0];
+    logger.info(`[NO_AI] Finding best candidate from search results (deterministic matching)...`);
+    const cleanName = product.productName.toLowerCase();
+    const nameSpecs = extractSpecs(product.productName);
+
+    const accessoryKeywords = ["case", "cover", "protector", "glass", "strap", "band", "sleeve", "pouch", "housing", "cable", "charger", "holder", "mount", "cap"];
+    const queryHasAccessory = accessoryKeywords.some(kw => cleanName.includes(kw));
+
+    let bestCandidate = null;
+
+    for (const result of searchResults) {
+      const resTitle = result.title.toLowerCase();
+
+      // 1. Accessory check
+      if (!queryHasAccessory) {
+        const resultHasAccessory = accessoryKeywords.some(kw => resTitle.includes(kw));
+        if (resultHasAccessory) {
+          logger.info(`  Skipping "${result.title}" (Reason: Query is not an accessory, but result title contains accessory keyword)`);
+          continue;
+        }
+      }
+
+      // 2. Core Model Token Match
+      const mainTokens = cleanName
+        .replace(/apple|samsung|sony|canon|nikon|oppo|nintendo|google|microsoft/g, "")
+        .replace(/\d+\s*(gb|tb|mb)/g, "")
+        .replace(/\b(cellular|wifi|wi-fi|gps|lte|5g|4g|3g)\b/g, "")
+        .replace(/\b(excellent|pristine|good|very good|refurbished|renewed|brand new)\b/g, "")
+        .replace(/\b(grey|gray|silver|black|white|gold|pink|blue|green|purple|yellow|red|midnight|starlight)\b/g, "")
+        .replace(/[(),\-]/g, " ")
+        .split(/\s+/)
+        .filter(t => t.length > 1);
+
+      const matchesModel = mainTokens.every(token => resTitle.includes(token));
+      if (!matchesModel) {
+        logger.info(`  Skipping "${result.title}" (Reason: Main model tokens [${mainTokens.join(", ")}] not found)`);
+        continue;
+      }
+
+      // 3. Modifier Match (Pro, Max, Mini, FE, Plus, etc.)
+      const modelModifiers = ["mini", "pro", "max", "ultra", "plus", "s", "xs", "xr", "fe"];
+      let modifierMismatch = false;
+      for (const mod of modelModifiers) {
+        const nameHasMod = new RegExp(`\\b${mod}\\b`, "i").test(cleanName);
+        const resHasMod = new RegExp(`\\b${mod}\\b`, "i").test(resTitle);
+        if (nameHasMod !== resHasMod) {
+          logger.info(`  Skipping "${result.title}" (Reason: Modifier "${mod}" mismatch. Target: ${nameHasMod}, Result: ${resHasMod})`);
+          modifierMismatch = true;
+          break;
+        }
+      }
+      if (modifierMismatch) continue;
+
+      // 4. Storage Match
+      const supportsVariantPicker = "selectVariantsAndGetPrice" in searchService || typeof (searchService as any).matchDirectly === "function";
+      if (!supportsVariantPicker && nameSpecs.storage.length > 0) {
+        const resSpecs = extractSpecs(result.title);
+        if (resSpecs.storage.length > 0) {
+          const normStorage = (s: string) => s.replace(/\s+/g, "").toLowerCase();
+          const nameStorageNorm = nameSpecs.storage.map(normStorage);
+          const resStorageNorm = resSpecs.storage.map(normStorage);
+          const hasStorageMatch = nameStorageNorm.some(ns => resStorageNorm.includes(ns));
+          if (!hasStorageMatch) {
+            logger.info(`  Skipping "${result.title}" (Reason: Storage mismatch. Target: [${nameSpecs.storage.join(", ")}], Result: [${resSpecs.storage.join(", ")}])`);
+            continue;
+          }
+        }
+      }
+
+      bestCandidate = result;
+      break;
+    }
+
+    if (!bestCandidate) {
+      logger.warn(`[NO_AI] No deterministic match found for: ${product.productName}`);
+      return buildNoMatchResult(product);
+    }
+
+    logger.info(`[NO_AI] Selected candidate: "${bestCandidate.title}"`);
 
     // Navigate to detail page and extract price
-    await page.goto(topResult.url, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.goto(bestCandidate.url, { waitUntil: "domcontentloaded", timeout: 30000 });
 
     let price: number | null = null;
-    let cleanUrl = topResult.url.split("?")[0];
+    let cleanUrl = bestCandidate.url.split("?")[0];
 
     if ("selectVariantsAndGetPrice" in searchService) {
-      const variantResult = await (searchService as any).selectVariantsAndGetPrice(page, product, topResult.url);
+      const variantResult = await (searchService as any).selectVariantsAndGetPrice(page, product, bestCandidate.url);
       price = variantResult.price;
       cleanUrl = variantResult.cleanUrl;
     } else {
       price = await extractPriceFromProductPage(page);
       if (target === "amazon") {
-        cleanUrl = cleanAmazonUrl(topResult.url);
+        cleanUrl = cleanAmazonUrl(bestCandidate.url);
       }
     }
 
-    const specs = extractSpecs(topResult.title);
+    const specs = extractSpecs(bestCandidate.title);
     const specStr = [
       specs.cpu.join(", "),
       specs.ram.join(", "),
@@ -312,7 +388,7 @@ async function processSingleProduct(
     ].filter(Boolean).join(" | ") || "No specs detected";
 
     let conditionStr = "Brand New";
-    const titleLower = topResult.title.toLowerCase();
+    const titleLower = bestCandidate.title.toLowerCase();
     if (titleLower.includes("refurbished") || titleLower.includes("renewed") || cleanUrl.toLowerCase().includes("refurbished") || cleanUrl.toLowerCase().includes("backmarket") || cleanUrl.toLowerCase().includes("reebelo") || cleanUrl.toLowerCase().includes("phonebot")) {
       if (titleLower.includes("pristine") || titleLower.includes("like new")) {
         conditionStr = "Pristine";
@@ -325,7 +401,7 @@ async function processSingleProduct(
       }
     }
 
-    return buildMatchedResult(product, cleanUrl, topResult.title, price, 0.5, specStr, conditionStr);
+    return buildMatchedResult(product, cleanUrl, bestCandidate.title, price, 0.5, specStr, conditionStr);
   }
 
   // Standard path: AI-powered candidate evaluation (for stores without nested variants)
