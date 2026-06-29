@@ -224,7 +224,7 @@ export class ReebeloSearchService {
     }
   }
 
-  async selectVariantsAndGetPrice(page: Page, product: BecexProduct): Promise<{price: number | null, cleanUrl: string}> {
+  async selectVariantsAndGetPrice(page: Page, product: BecexProduct): Promise<{price: number | null, cleanUrl: string, selectedCondition?: string}> {
     logger.info(`Selecting Reebelo variants for: ${product.productName}`);
     await randomDelay(2000, 3000);
 
@@ -238,6 +238,7 @@ export class ReebeloSearchService {
     const isExcellent = product.sku.endsWith(excellentSuffix);
 
     const storeRules = catRules?.stores?.reebelo;
+    let selectedCondition: string | undefined;
 
     // ── CORRECT ORDER: CPU → RAM → Storage → Color → Condition → Battery → SIM ──
     // Reebelo is nested: condition options only appear after storage+color are set.
@@ -269,8 +270,10 @@ export class ReebeloSearchService {
     // Mapping: Pristine -> 'Like New', Excellent -> 'Very Good'
     if (isPristine && storeRules?.conditionMapping?.Pristine) {
       await this.clickReebeloVariant(page, "condition", storeRules.conditionMapping.Pristine, "Condition: Pristine");
+      selectedCondition = storeRules.conditionMapping.Pristine[0];
     } else if (isExcellent && storeRules?.conditionMapping?.Excellent) {
       await this.clickReebeloVariant(page, "condition", storeRules.conditionMapping.Excellent, "Condition: Excellent");
+      selectedCondition = storeRules.conditionMapping.Excellent[0];
     }
 
     // 4. Connectivity selection
@@ -340,7 +343,7 @@ export class ReebeloSearchService {
       return null;
     });
 
-    return { price, cleanUrl: page.url() };
+    return { price, cleanUrl: page.url(), selectedCondition };
   }
 
   /**

@@ -183,6 +183,66 @@ async function waitForNewGeminiKeys(matcherService: GeminiMatcherService, curren
   }
 }
 
+function getResultCondition(
+  product: BecexProduct,
+  target: string,
+  category: string,
+  matchedTitle: string,
+  matchedUrl: string,
+  selectedConditionFromPicker?: string
+): string {
+  if (category !== "MAPPING REFURBISHED") {
+    return "Brand New";
+  }
+
+  if (selectedConditionFromPicker) {
+    return selectedConditionFromPicker;
+  }
+
+  // Load rules to find target condition mappings
+  try {
+    const rulesConfig = loadRules();
+    const catRules = rulesConfig["MAPPING REFURBISHED"];
+    const storeRules = catRules?.stores?.[target];
+
+    if (storeRules?.conditionMapping) {
+      const pristineSuffix = catRules?.skuMappings?.Pristine || "-VR-ASN-AU";
+      const excellentSuffix = catRules?.skuMappings?.Excellent || "-RD-VR-EXD-AU";
+      const veryGoodSuffix = catRules?.skuMappings?.["Very Good"] || "-VGC-AU";
+
+      const isPristine = product.sku.endsWith(pristineSuffix) || product.productName.toLowerCase().includes("pristine");
+      const isExcellent = product.sku.includes(excellentSuffix) || product.sku.includes("EXD-AU") || product.productName.toLowerCase().includes("excellent");
+      const isVeryGood = product.sku.includes(veryGoodSuffix) || product.productName.toLowerCase().includes("very good") || product.productName.toLowerCase().includes("vgc");
+
+      if (isPristine && storeRules.conditionMapping.Pristine) {
+        return storeRules.conditionMapping.Pristine[0];
+      }
+      if (isExcellent && storeRules.conditionMapping.Excellent) {
+        return storeRules.conditionMapping.Excellent[0];
+      }
+      if (isVeryGood && storeRules.conditionMapping["Very Good"]) {
+        return storeRules.conditionMapping["Very Good"][0];
+      }
+    }
+  } catch (err) {
+    logger.warn(`Could not load condition mappings: ${(err as Error).message}`);
+  }
+
+  // Fallback keyword matching on title/URL
+  const titleLower = matchedTitle.toLowerCase();
+  if (titleLower.includes("pristine") || titleLower.includes("like new") || titleLower.includes("premium")) {
+    return "Pristine";
+  } else if (titleLower.includes("excellent") || titleLower.includes("very good")) {
+    return "Excellent";
+  } else if (titleLower.includes("good")) {
+    return "Good";
+  } else if (titleLower.includes("fair")) {
+    return "Fair";
+  }
+
+  return "Refurbished";
+}
+
 // ── Process Single Product ─────────────────────────────────
 
 async function processSingleProduct(
@@ -264,19 +324,7 @@ async function processSingleProduct(
       specs.connectivity.join(", ")
     ].filter(Boolean).join(" | ") || "No specs detected";
 
-    let conditionStr = "Brand New";
-    const titleLower = directMatch.title.toLowerCase();
-    if (titleLower.includes("refurbished") || titleLower.includes("renewed") || directMatch.url.toLowerCase().includes("refurbished") || directMatch.url.toLowerCase().includes("backmarket") || directMatch.url.toLowerCase().includes("reebelo") || directMatch.url.toLowerCase().includes("phonebot")) {
-      if (titleLower.includes("pristine") || titleLower.includes("like new")) {
-        conditionStr = "Pristine";
-      } else if (titleLower.includes("excellent") || titleLower.includes("very good")) {
-        conditionStr = "Excellent";
-      } else if (titleLower.includes("good")) {
-        conditionStr = "Good";
-      } else {
-        conditionStr = "Refurbished";
-      }
-    }
+    const conditionStr = getResultCondition(product, target, config.mappingCategory, directMatch.title, directMatch.url);
     return buildMatchedResult(product, directMatch.url, directMatch.title, directMatch.price, 1.0, specStr, conditionStr);
   }
 
@@ -366,11 +414,13 @@ async function processSingleProduct(
 
     let price: number | null = null;
     let cleanUrl = bestCandidate.url.split("?")[0];
+    let selectedConditionFromPicker: string | undefined;
 
     if ("selectVariantsAndGetPrice" in searchService) {
       const variantResult = await (searchService as any).selectVariantsAndGetPrice(page, product, bestCandidate.url);
       price = variantResult.price;
       cleanUrl = variantResult.cleanUrl;
+      selectedConditionFromPicker = variantResult.selectedCondition;
     } else {
       price = await extractPriceFromProductPage(page);
       if (target === "amazon") {
@@ -387,19 +437,7 @@ async function processSingleProduct(
       specs.connectivity.join(", ")
     ].filter(Boolean).join(" | ") || "No specs detected";
 
-    let conditionStr = "Brand New";
-    const titleLower = bestCandidate.title.toLowerCase();
-    if (titleLower.includes("refurbished") || titleLower.includes("renewed") || cleanUrl.toLowerCase().includes("refurbished") || cleanUrl.toLowerCase().includes("backmarket") || cleanUrl.toLowerCase().includes("reebelo") || cleanUrl.toLowerCase().includes("phonebot")) {
-      if (titleLower.includes("pristine") || titleLower.includes("like new")) {
-        conditionStr = "Pristine";
-      } else if (titleLower.includes("excellent") || titleLower.includes("very good")) {
-        conditionStr = "Excellent";
-      } else if (titleLower.includes("good")) {
-        conditionStr = "Good";
-      } else {
-        conditionStr = "Refurbished";
-      }
-    }
+    const conditionStr = getResultCondition(product, target, config.mappingCategory, bestCandidate.title, cleanUrl, selectedConditionFromPicker);
 
     return buildMatchedResult(product, cleanUrl, bestCandidate.title, price, 0.5, specStr, conditionStr);
   }
@@ -442,11 +480,13 @@ async function processSingleProduct(
   // Step 4: Extract Price from detail page
   let price: number | null = null;
   let cleanUrl = matchedResult.url.split("?")[0];
+  let selectedConditionFromPicker: string | undefined;
 
   if ("selectVariantsAndGetPrice" in searchService) {
     const result = await (searchService as any).selectVariantsAndGetPrice(page, product, matchedResult.url);
     price = result.price;
     cleanUrl = result.cleanUrl;
+    selectedConditionFromPicker = result.selectedCondition;
   } else {
     price = await extractPriceFromProductPage(page);
     if (target === "amazon") {
@@ -464,19 +504,7 @@ async function processSingleProduct(
     specs.connectivity.join(", ")
   ].filter(Boolean).join(" | ") || "No specs detected";
 
-  let conditionStr = "Brand New";
-  const titleLower = finalTitle.toLowerCase();
-  if (titleLower.includes("refurbished") || titleLower.includes("renewed") || cleanUrl.toLowerCase().includes("refurbished") || cleanUrl.toLowerCase().includes("backmarket") || cleanUrl.toLowerCase().includes("reebelo") || cleanUrl.toLowerCase().includes("phonebot")) {
-    if (titleLower.includes("pristine") || titleLower.includes("like new")) {
-      conditionStr = "Pristine";
-    } else if (titleLower.includes("excellent") || titleLower.includes("very good")) {
-      conditionStr = "Excellent";
-    } else if (titleLower.includes("good")) {
-      conditionStr = "Good";
-    } else {
-      conditionStr = "Refurbished";
-    }
-  }
+  const conditionStr = getResultCondition(product, target, config.mappingCategory, finalTitle, cleanUrl, selectedConditionFromPicker);
 
   return buildMatchedResult(
     product,

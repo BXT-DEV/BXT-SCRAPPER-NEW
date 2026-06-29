@@ -452,7 +452,7 @@ export class BackmarketSearchService {
     }
   }
 
-  async selectVariantsAndGetPrice(page: Page, product: BecexProduct, matchedUrl?: string): Promise<{price: number | null, cleanUrl: string}> {
+  async selectVariantsAndGetPrice(page: Page, product: BecexProduct, matchedUrl?: string): Promise<{price: number | null, cleanUrl: string, selectedCondition?: string}> {
     logger.info(`Selecting Backmarket variants for: ${product.productName}`);
     await randomDelay(2000, 3000);
 
@@ -524,14 +524,16 @@ export class BackmarketSearchService {
     const specs = extractSpecs(product.productName);
     const isPristine = product.sku.endsWith(pristineSuffix) || product.productName.toLowerCase().includes("pristine");
     const isExcellent = product.sku.includes(excellentSuffix) || product.sku.includes("EXD-AU") || product.productName.toLowerCase().includes("excellent");
-
     const storeRules = catRules?.stores?.backmarket;
+    let selectedCondition: string | undefined;
 
     // 1. Condition selection
     if (isPristine && storeRules?.conditionMapping?.Pristine) {
       await this.clickVariantByText(page, storeRules.conditionMapping.Pristine);
+      selectedCondition = storeRules.conditionMapping.Pristine[0];
     } else if (isExcellent && storeRules?.conditionMapping?.Excellent) {
       await this.clickVariantByText(page, storeRules.conditionMapping.Excellent);
+      selectedCondition = storeRules.conditionMapping.Excellent[0];
     }
 
     // 2. Storage selection
@@ -621,7 +623,7 @@ export class BackmarketSearchService {
       return null;
     });
 
-    return { price, cleanUrl: page.url() };
+    return { price, cleanUrl: page.url(), selectedCondition };
   }
 
   private async clickVariantByText(page: Page, texts: string[]): Promise<boolean> {
