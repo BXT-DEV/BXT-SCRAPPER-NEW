@@ -275,7 +275,17 @@ export class ReebeloSearchService {
 
     // 4. Connectivity selection
     if (specs.connectivity.length > 0) {
-      await this.clickReebeloVariant(page, "connectivity", specs.connectivity, "Connectivity");
+      const hasConnectivityOption = await page.evaluate(() => {
+        return !!(
+          document.querySelector('#e2e-pdp-connectivity') || 
+          document.querySelector('[id^="e2e-pdp-connectivity-"]')
+        );
+      });
+      if (hasConnectivityOption) {
+        await this.clickReebeloVariant(page, "connectivity", specs.connectivity, "Connectivity");
+      } else {
+        logger.info(`  ✓ Skipping Connectivity selection ("${specs.connectivity.join(", ")}") because no connectivity variant options exist on this page.`);
+      }
     }
 
     // 5. Battery selection
