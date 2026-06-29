@@ -159,8 +159,9 @@ const COLOR_ALIASES: ReadonlyMap<string, string[]> = new Map([
   ["natural titanium",["natural"]],
   ["pink",           ["titanium pink"]],
   ["titanium pink",  ["pink"]],
-  ["green",          ["titanium green"]],
+  ["green",          ["titanium green", "midnight green"]],
   ["titanium green", ["green"]],
+  ["midnight green", ["green"]],
 ]);
 
 // ── Prompt template ────────────────────────────────────────

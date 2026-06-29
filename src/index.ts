@@ -188,7 +188,7 @@ async function waitForNewGeminiKeys(matcherService: GeminiMatcherService, curren
 async function processSingleProduct(
   product: BecexProduct,
   searchService: AmazonSearchService | JbHifiSearchService | KoganSearchService | PhonebotSearchService | ReebeloSearchService | BackmarketSearchService | MobilecitiSearchService | BuymobileSearchService | SpectronicSearchService | BestmobilephoneSearchService | ScorptecSearchService | CentrecomSearchService | DigidirectSearchService | GeorgesSearchService,
-  matcherService: GeminiMatcherService,
+  matcherService: GeminiMatcherService | null,
   page: Page,
   target: ScraperTarget
 ): Promise<ScrapedResult> {
@@ -280,6 +280,54 @@ async function processSingleProduct(
     return buildMatchedResult(product, directMatch.url, directMatch.title, directMatch.price, 1.0, specStr, conditionStr);
   }
 
+  // ── No-AI fast path: take first search result directly ─────────────
+  if (config.noAi) {
+    logger.info(`[NO_AI] Skipping AI matching — using top search result directly`);
+    const topResult = searchResults[0];
+
+    // Navigate to detail page and extract price
+    await page.goto(topResult.url, { waitUntil: "domcontentloaded", timeout: 30000 });
+
+    let price: number | null = null;
+    let cleanUrl = topResult.url.split("?")[0];
+
+    if ("selectVariantsAndGetPrice" in searchService) {
+      const variantResult = await (searchService as any).selectVariantsAndGetPrice(page, product, topResult.url);
+      price = variantResult.price;
+      cleanUrl = variantResult.cleanUrl;
+    } else {
+      price = await extractPriceFromProductPage(page);
+      if (target === "amazon") {
+        cleanUrl = cleanAmazonUrl(topResult.url);
+      }
+    }
+
+    const specs = extractSpecs(topResult.title);
+    const specStr = [
+      specs.cpu.join(", "),
+      specs.ram.join(", "),
+      specs.storage.join(", "),
+      specs.colors.join(", "),
+      specs.connectivity.join(", ")
+    ].filter(Boolean).join(" | ") || "No specs detected";
+
+    let conditionStr = "Brand New";
+    const titleLower = topResult.title.toLowerCase();
+    if (titleLower.includes("refurbished") || titleLower.includes("renewed") || cleanUrl.toLowerCase().includes("refurbished") || cleanUrl.toLowerCase().includes("backmarket") || cleanUrl.toLowerCase().includes("reebelo") || cleanUrl.toLowerCase().includes("phonebot")) {
+      if (titleLower.includes("pristine") || titleLower.includes("like new")) {
+        conditionStr = "Pristine";
+      } else if (titleLower.includes("excellent") || titleLower.includes("very good")) {
+        conditionStr = "Excellent";
+      } else if (titleLower.includes("good")) {
+        conditionStr = "Good";
+      } else {
+        conditionStr = "Refurbished";
+      }
+    }
+
+    return buildMatchedResult(product, cleanUrl, topResult.title, price, 0.5, specStr, conditionStr);
+  }
+
   // Standard path: AI-powered candidate evaluation (for stores without nested variants)
   let screenshot: Buffer | undefined;
   try {
@@ -289,7 +337,7 @@ async function processSingleProduct(
   }
 
   // 1. Identify candidates
-  const candidates = await matcherService.getTopCandidates(product, searchResults);
+  const candidates = await matcherService!.getTopCandidates(product, searchResults);
   const detailedCandidates: DetailedCandidate[] = [];
 
   // 2. Gather details
@@ -303,7 +351,7 @@ async function processSingleProduct(
   }
 
   // 3. Confirm match
-  const matchResult = await matcherService.confirmMatch(product, detailedCandidates);
+  const matchResult = await matcherService!.confirmMatch(product, detailedCandidates);
 
   if (!matchResult.isMatch || matchResult.matchedResultIndex < 0) {
     return buildNoMatchResult(product);
@@ -375,6 +423,7 @@ async function main(): Promise<void> {
   logger.info(`  Category : ${config.mappingCategory}`);
   logger.info(`  Target   : ${config.scraperTarget}`);
   logger.info(`  Mode     : ${config.scraperMode.toUpperCase()}`);
+  logger.info(`  AI       : ${config.noAi ? "DISABLED (No AI)" : "ENABLED (Gemini)"}`);
   logger.info("═══════════════════════════════════════════");
 
   const products = await readProductsCsv(config.inputCsvPath);
@@ -456,9 +505,14 @@ async function main(): Promise<void> {
       searchService = new AmazonSearchService(config.amazonDomain, config.maxSearchResults);
     }
 
-    // Load gemini keys for this specific target
-    const targetKeys = reloadGeminiKeys(target);
-    const matcherService = new GeminiMatcherService(targetKeys, config.mappingCategory, target);
+    // Load gemini keys for this specific target (skip if NO_AI)
+    let matcherService: GeminiMatcherService | null = null;
+    if (!config.noAi) {
+      const targetKeys = reloadGeminiKeys(target);
+      matcherService = new GeminiMatcherService(targetKeys, config.mappingCategory, target);
+    } else {
+      logger.info(`[NO_AI] Gemini matcher disabled — running without AI`);
+    }
 
     for (let i = 0; i < pendingProducts.length; i++) {
       if (isShuttingDown) break;
@@ -487,7 +541,7 @@ async function main(): Promise<void> {
         await appendResultRow(outputPath, errorResult, activeRound);
         logger.error(`${progress} [${target}] ⚠️ Error: ${errorMessage}`);
 
-        if (errorMessage === "ALL_GEMINI_KEYS_EXHAUSTED") {
+        if (errorMessage === "ALL_GEMINI_KEYS_EXHAUSTED" && !config.noAi && matcherService) {
           updateScraperStatus("paused", "ALL_GEMINI_KEYS_EXHAUSTED");
           await waitForNewGeminiKeys(matcherService, matcherService.getApiKeys(), target);
           i--; // Retry the same product

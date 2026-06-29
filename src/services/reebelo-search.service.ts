@@ -345,7 +345,7 @@ export class ReebeloSearchService {
     ["silver", ["Titanium Silver", "Titanium White Silver", "Silver Shadow"]],
     ["white",  ["Titanium White", "Titanium White Silver"]],
     ["pink",   ["Titanium Pink", "Titanium Pink Gold"]],
-    ["green",  ["Titanium Green", "Titanium Jade Green"]],
+    ["green",  ["Titanium Green", "Titanium Jade Green", "Midnight Green"]],
     ["gold",   ["Titanium Gold", "Titanium Pink Gold"]],
     ["natural",["Titanium Natural", "Natural Titanium"]],
   ]);

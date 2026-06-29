@@ -16,7 +16,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = 3333;
+const PORT = 4444;
 const PROJECT_ROOT = process.cwd();
 const ENV_PATH = path.join(PROJECT_ROOT, ".env");
 const ENV_EXAMPLE_PATH = path.join(PROJECT_ROOT, ".env.example");

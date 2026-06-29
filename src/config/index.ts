@@ -83,6 +83,7 @@ interface AppConfig {
   projectRoot: string;
   chromeUserDataDir: string;
   isDryRun: boolean;
+  noAi: boolean;
 }
 
 function validateCategoryTargetPair(category: MappingCategory, target: ScraperTarget): void {
@@ -129,15 +130,16 @@ function loadGeminiApiKeys(scraperTarget?: string): string[] {
 
 function loadConfig(): AppConfig {
   const isDryRun = process.argv.includes("--dry-run");
+  const noAi = process.env.NO_AI === "true";
 
   const mappingCategory = (process.env.MAPPING_CATEGORY as MappingCategory) || "MAPPING BRAND NEW";
   const scraperTarget = (process.env.SCRAPER_TARGET as ScraperTarget) || "amazon";
   const scraperMode = (process.env.SCRAPER_MODE as ScraperMode) || "fresh";
 
   const geminiApiKeys = loadGeminiApiKeys(scraperTarget);
-  if (geminiApiKeys.length === 0) {
+  if (!noAi && geminiApiKeys.length === 0) {
     throw new Error(
-      "GEMINI_API_KEY is required. Set it in .env file."
+      "GEMINI_API_KEY is required. Set it in .env file (or set NO_AI=true to skip AI matching)."
     );
   }
 
@@ -179,6 +181,7 @@ function loadConfig(): AppConfig {
     projectRoot: PROJECT_ROOT,
     chromeUserDataDir: process.env.CHROME_USER_DATA_DIR || path.join(PROJECT_ROOT, "chrome-data"),
     isDryRun,
+    noAi,
   };
 }
 
