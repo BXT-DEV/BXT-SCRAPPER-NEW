@@ -141,27 +141,38 @@ const MAX_GEMINI_RETRIES = 2;
 // Samsung Galaxy S25 series uses "Titanium X" branding.
 // Reebelo and other stores may use the full name while our CSV uses the short form.
 const COLOR_ALIASES: ReadonlyMap<string, string[]> = new Map([
-  ["gray",           ["titanium gray", "titanium grey"]],
-  ["grey",           ["titanium gray", "titanium grey"]],
-  ["titanium gray",  ["gray", "grey"]],
-  ["titanium grey",  ["gray", "grey"]],
-  ["black",          ["titanium black"]],
+  ["gray",           ["titanium gray", "titanium grey", "graphite", "space grey", "space gray"]],
+  ["grey",           ["titanium gray", "titanium grey", "graphite", "space grey", "space gray"]],
+  ["titanium gray",  ["gray", "grey", "graphite"]],
+  ["titanium grey",  ["gray", "grey", "graphite"]],
+  ["graphite",       ["gray", "grey", "space grey", "space gray", "titanium gray", "titanium grey"]],
+  ["black",          ["titanium black", "phantom black", "space black"]],
   ["titanium black", ["black"]],
-  ["blue",           ["titanium blue"]],
+  ["phantom black",  ["black"]],
+  ["space black",    ["black"]],
+  ["blue",           ["titanium blue", "pacific blue", "sierra blue"]],
   ["titanium blue",  ["blue"]],
+  ["pacific blue",   ["blue"]],
+  ["sierra blue",    ["blue"]],
   ["silver",         ["titanium silver", "silver shadow"]],
   ["titanium silver",["silver"]],
   ["silver shadow",  ["silver"]],
-  ["white",          ["titanium white"]],
+  ["white",          ["titanium white", "phantom white"]],
   ["titanium white", ["white"]],
+  ["phantom white",  ["white"]],
   ["natural",        ["titanium natural", "natural titanium"]],
   ["titanium natural",["natural"]],
   ["natural titanium",["natural"]],
   ["pink",           ["titanium pink"]],
   ["titanium pink",  ["pink"]],
-  ["green",          ["titanium green", "midnight green"]],
+  ["green",          ["titanium green", "midnight green", "alpine green"]],
   ["titanium green", ["green"]],
   ["midnight green", ["green"]],
+  ["alpine green",   ["green"]],
+  ["purple",         ["deep purple"]],
+  ["deep purple",    ["purple"]],
+  ["bronze",         ["desert titanium", "bronze titanium"]],
+  ["desert titanium",["bronze"]],
 ]);
 
 // ── Prompt template ────────────────────────────────────────
@@ -406,7 +417,8 @@ export class GeminiMatcherService {
 
     // 4. Color Check (with alias support for brand-prefixed colors)
     const commonColors = [
-      "blue", "grey", "gray", "black", "white", "silver", "gold", "green", "pink", "purple", "violet", "orange", "yellow", "cream", "natural"
+      "blue", "grey", "gray", "black", "white", "silver", "gold", "green", "pink", "purple", "violet", "orange", "yellow", "cream", "natural",
+      "graphite", "bronze", "coral", "teal", "midnight", "starlight"
     ];
 
     for (const color of commonColors) {

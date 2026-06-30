@@ -17,7 +17,7 @@ import http from "http";
 
 const execAsync = promisify(exec);
 
-const CDP_PORT = 9222;
+const CDP_PORT_DEFAULT = 9222;
 const MAX_CDP_WAIT_MS = 15000;
 const CDP_POLL_INTERVAL_MS = 500;
 
@@ -112,9 +112,33 @@ export class BrowserService {
   private chromeProcess: ChildProcess | null = null;
   private readonly proxyUrl: string | null;
   private userDataDir: string | null = null;
+  private readonly cdpPort: number;
 
   constructor(proxyUrl: string | null) {
     this.proxyUrl = proxyUrl;
+
+    if (process.env.CDP_PORT) {
+      this.cdpPort = parseInt(process.env.CDP_PORT, 10);
+    } else {
+      const target = (process.env.SCRAPER_TARGET || "results").toLowerCase();
+      const targetPorts: Record<string, number> = {
+        amazon: 9222,
+        backmarket: 9223,
+        reebelo: 9224,
+        jbhifi: 9225,
+        phonebot: 9226,
+        kogan: 9227,
+        mobileciti: 9228,
+        buymobile: 9229,
+        spectronic: 9230,
+        bestmobilephone: 9231,
+        scorptec: 9232,
+        centrecom: 9233,
+        digidirect: 9234,
+        georges: 9235,
+      };
+      this.cdpPort = targetPorts[target] || 9222;
+    }
   }
 
   async initialize(): Promise<void> {
@@ -129,7 +153,7 @@ export class BrowserService {
 
     // Build Chrome launch arguments
     const chromeArgs = this.buildChromeArgs(chromePath);
-    logger.info(`Launching Chrome in Guest mode (CDP port ${CDP_PORT})...`);
+    logger.info(`Launching Chrome in Guest mode (CDP port ${this.cdpPort})...`);
 
     // Launch Chrome as a real subprocess
     this.chromeProcess = spawn(chromePath, chromeArgs, {
@@ -148,11 +172,11 @@ export class BrowserService {
 
     // Wait for CDP to be ready
     logger.info("Waiting for Chrome CDP to be ready...");
-    const wsUrl = await waitForCdpReady(CDP_PORT, MAX_CDP_WAIT_MS);
+    const wsUrl = await waitForCdpReady(this.cdpPort, MAX_CDP_WAIT_MS);
     logger.info(`Chrome CDP ready: ${wsUrl}`);
 
     // Connect Playwright to the running Chrome via CDP
-    this.browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`);
+    this.browser = await chromium.connectOverCDP(`http://127.0.0.1:${this.cdpPort}`);
     
     // Get the default context (the Guest profile context)
     const contexts = this.browser.contexts();
@@ -189,7 +213,7 @@ export class BrowserService {
   private buildChromeArgs(chromePath: string): string[] {
     const userDataDir = this.userDataDir || config.chromeUserDataDir;
     const args: string[] = [
-      `--remote-debugging-port=${CDP_PORT}`,
+      `--remote-debugging-port=${this.cdpPort}`,
       `--user-data-dir=${userDataDir}`,
       "--guest",                              // Guest mode — clean profile, no login
       "--no-first-run",                       // Skip "Welcome to Chrome" screen
@@ -218,9 +242,9 @@ export class BrowserService {
     const platform = process.platform;
     try {
       if (platform === "darwin") {
-        logger.info("Checking for running Chrome instances (Mac)...");
+        logger.info(`Checking for running Chrome instances on port ${this.cdpPort} (Mac)...`);
         // Kill any Chrome with our CDP port
-        await execAsync(`lsof -ti :${CDP_PORT} | xargs kill -9 2>/dev/null`).catch(() => {});
+        await execAsync(`lsof -ti :${this.cdpPort} | xargs kill -9 2>/dev/null`).catch(() => {});
       } else if (platform === "win32") {
         logger.info("Checking for running Chrome instances (Windows)... skipping to protect user sessions.");
       }

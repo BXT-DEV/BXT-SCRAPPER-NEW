@@ -1,8 +1,5 @@
 SKU;Product Name;link;spec;amazon_price;amazon_title;match_confidence;status;error_message;condition;link_round1
-iPhone125G128GBBlue-VR-ASN-AU;Apple iPhone 12 5G (128GB, Blue) - Pristine;;;;;0;error;"page.goto: Timeout 30000ms exceeded.
-Call log:
-[2m  - navigating to ""https://reebelo.com.au/"", waiting until ""domcontentloaded""[22m
-";;
+iPhone125G128GBBlue-VR-ASN-AU;Apple iPhone 12 5G (128GB, Blue) - Pristine;https://reebelo.com.au/collections/apple-iphone-12?skuId=sku-mq8bi6vmDUeHhSSdmGxwncw;128GB, 128 GB | Blue;;iPhone 12 - 128GB - Blue;1;matched;;Like New;https://reebelo.com.au/collections/apple-iphone-12?skuId=sku-mq8bi6vmDUeHhSSdmGxwncw
 iPhone12Pro5G128GBBlue-RD-VR-EXD-AU;Apple iPhone 12 Pro 5G (128GB, Blue) - Excellent;https://reebelo.com.au/collections/apple-iphone-12-pro?skuId=sku-mnoweld5W2btyOuw03fZtbm;128GB, 128 GB | Pacific Blue;;iPhone 12 Pro - 128GB - Pacific Blue;1;matched;;Very Good;https://reebelo.com.au/collections/apple-iphone-12-pro?skuId=sku-mnoweld5W2btyOuw03fZtbm
 iPh12Mini5G256GBPurp-VR-ASN-AU;Apple iPhone 12 Mini (256GB, Purple) - Pristine;https://reebelo.com.au/collections/apple-iphone-12-mini?skuId=sku-mq8c0otqzhbcGkF4oqlIg7d;256GB, 256 GB | Purple;;iPhone 12 mini - 256GB - Purple;1;matched;;Like New;https://reebelo.com.au/collections/apple-iphone-12-mini?skuId=sku-mq8c0otqzhbcGkF4oqlIg7d
 iPhone12Pro5G128GBGold-RD-VR-EXD-AU;Apple iPhone 12 Pro 5G (128GB, Gold) - Excellent;https://reebelo.com.au/collections/apple-iphone-12-pro?skuId=sku-mnpn1gogwiDPMpVLjv6Jfu6;128GB, 128 GB | Gold;;iPhone 12 Pro - 128GB - Gold;1;matched;;Very Good;https://reebelo.com.au/collections/apple-iphone-12-pro?skuId=sku-mnpn1gogwiDPMpVLjv6Jfu6

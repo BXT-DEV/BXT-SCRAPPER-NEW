@@ -14,8 +14,8 @@
             "Premium"
           ],
           "Excellent": [
-            "Excellent",
-            "Very Good"
+            "Very Good",
+            "Excellent"
           ]
         },
         "batteryPolicy": "Standard Only",

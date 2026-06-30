@@ -22,7 +22,9 @@ export function getOutputFilePath(outputDir: string): string {
 /**
  * Reads and parses the entire output CSV into a list of row objects.
  */
-export async function readExistingCsv(outputPath: string): Promise<Record<string, string>[]> {
+export async function readExistingCsv(
+  outputPath: string,
+): Promise<Record<string, string>[]> {
   if (!fs.existsSync(outputPath)) {
     return [];
   }
@@ -75,13 +77,16 @@ export function getActiveRound(rows: Record<string, string>[]): number {
     .filter((num) => num > 0);
 
   if (roundKeys.length === 0) {
-    const hasAnyLink = rows.some((r) => r["link"] && r["link"].trim().length > 0);
+    const hasAnyLink = rows.some(
+      (r) => r["link"] && r["link"].trim().length > 0,
+    );
     return hasAnyLink ? 2 : 1;
   }
 
   const maxRound = Math.max(...roundKeys);
   const matchedRows = rows.filter(
-    (r) => r["status"] === "matched" || (r["link"] && r["link"].trim().length > 0)
+    (r) =>
+      r["status"] === "matched" || (r["link"] && r["link"].trim().length > 0),
   );
 
   if (matchedRows.length === 0) {
@@ -89,7 +94,9 @@ export function getActiveRound(rows: Record<string, string>[]): number {
   }
 
   const allHaveMax = matchedRows.every(
-    (r) => r[`link_round${maxRound}`] && r[`link_round${maxRound}`].trim().length > 0
+    (r) =>
+      r[`link_round${maxRound}`] &&
+      r[`link_round${maxRound}`].trim().length > 0,
   );
 
   return allHaveMax ? maxRound + 1 : maxRound;
@@ -100,7 +107,7 @@ export function getActiveRound(rows: Record<string, string>[]): number {
  */
 export async function loadCompletedSkus(
   outputPath: string,
-  activeRound: number
+  activeRound: number,
 ): Promise<Set<string>> {
   const completedSkus = new Set<string>();
 
@@ -115,18 +122,24 @@ export async function loadCompletedSkus(
 
     const status = row["status"] || "";
     const hasRoundLink =
-      row[`link_round${activeRound}`] && row[`link_round${activeRound}`].trim().length > 0;
+      row[`link_round${activeRound}`] &&
+      row[`link_round${activeRound}`].trim().length > 0;
     const hasBaseLink =
       activeRound === 1 && row["link"] && row["link"].trim().length > 0;
 
-    if (status === "no_match" || status === "error" || hasRoundLink || hasBaseLink) {
+    if (
+      status === "no_match" ||
+      status === "error" ||
+      hasRoundLink ||
+      hasBaseLink
+    ) {
       completedSkus.add(sku);
     }
   }
 
   if (completedSkus.size > 0) {
     logger.info(
-      `Found ${completedSkus.size} already-processed SKUs for Round ${activeRound} (resume mode)`
+      `Found ${completedSkus.size} already-processed SKUs for Round ${activeRound} (resume mode)`,
     );
   }
   return completedSkus;
@@ -140,7 +153,7 @@ export async function appendResultRow(
   outputPath: string,
   result: ScrapedResult,
   activeRound?: number,
-  retries = -1 // -1 means infinite retries
+  retries = -1, // -1 means infinite retries
 ): Promise<void> {
   try {
     const fileExists = fs.existsSync(outputPath);
@@ -152,10 +165,13 @@ export async function appendResultRow(
     const round = activeRound ?? getActiveRound(rows);
 
     let existingRow = rows.find(
-      (r) => (r["SKU"] || "").trim().toLowerCase() === result.sku.trim().toLowerCase()
+      (r) =>
+        (r["SKU"] || "").trim().toLowerCase() ===
+        result.sku.trim().toLowerCase(),
     );
 
-    const cleanPrice = result.amazonPrice !== null ? result.amazonPrice.toString() : "";
+    const cleanPrice =
+      result.amazonPrice !== null ? result.amazonPrice.toString() : "";
 
     if (existingRow) {
       existingRow["Product Name"] = result.productName;
@@ -170,17 +186,17 @@ export async function appendResultRow(
       existingRow["condition"] = result.condition || "";
     } else {
       const newRow: Record<string, string> = {
-        "SKU": result.sku,
+        SKU: result.sku,
         "Product Name": result.productName,
-        "link": result.amazonUrl,
+        link: result.amazonUrl,
         [`link_round${round}`]: result.amazonUrl,
-        "amazon_price": cleanPrice,
-        "amazon_title": result.amazonTitle,
-        "match_confidence": result.matchConfidence.toString(),
-        "status": result.status,
-        "error_message": result.errorMessage,
-        "spec": result.spec || "",
-        "condition": result.condition || "",
+        amazon_price: cleanPrice,
+        amazon_title: result.amazonTitle,
+        match_confidence: result.matchConfidence.toString(),
+        status: result.status,
+        error_message: result.errorMessage,
+        spec: result.spec || "",
+        condition: result.condition || "",
       };
       rows.push(newRow);
     }
@@ -202,16 +218,26 @@ export async function appendResultRow(
     const maxRound = Math.max(...roundNums);
 
     // Compile headers
-    const headers = ["SKU", "Product Name", "link"];
+    const headers: string[] = [
+      "SKU",
+      "Product Name",
+      "link",
+      "spec",
+      "amazon_price",
+      "amazon_title",
+      "match_confidence",
+      "status",
+      "error_message",
+      "condition",
+    ];
     for (let r = 1; r <= maxRound; r++) {
       headers.push(`link_round${r}`);
     }
-    headers.push("amazon_price", "amazon_title", "match_confidence", "status", "error_message", "spec", "condition");
 
     const escapeField = (val: string | number | null): string => {
       const str = String(val ?? "");
-      if (str.includes(";") || str.includes("\"") || str.includes("\n")) {
-        return `"${str.replace(/"/g, "\"\"")}"`;
+      if (str.includes(";") || str.includes('"') || str.includes("\n")) {
+        return `"${str.replace(/"/g, '""')}"`;
       }
       return str;
     };
@@ -235,7 +261,7 @@ export async function appendResultRow(
         fs.renameSync(tmpPath, outputPath);
         renamed = true;
       } catch (err: any) {
-        if (err.code === 'EPERM' || err.code === 'EBUSY') {
+        if (err.code === "EPERM" || err.code === "EBUSY") {
           renameRetries--;
           await new Promise((resolve) => setTimeout(resolve, 2000));
         } else {
@@ -244,14 +270,27 @@ export async function appendResultRow(
       }
     }
     if (!renamed) {
-      throw new Error(`Failed to rename ${tmpPath} to ${outputPath} after retries.`);
+      throw new Error(
+        `Failed to rename ${tmpPath} to ${outputPath} after retries.`,
+      );
     }
   } catch (error: any) {
-    if ((error.code === 'EPERM' || error.code === 'EBUSY') && (retries === -1 || retries > 0)) {
-      const remainingMessage = retries === -1 ? "indefinitely" : `${retries} attempts left`;
-      logger.warn(`File locked (EPERM/EBUSY): ${outputPath}. Retrying in 5 seconds... (${remainingMessage})`);
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      return appendResultRow(outputPath, result, activeRound, retries === -1 ? -1 : retries - 1);
+    if (
+      (error.code === "EPERM" || error.code === "EBUSY") &&
+      (retries === -1 || retries > 0)
+    ) {
+      const remainingMessage =
+        retries === -1 ? "indefinitely" : `${retries} attempts left`;
+      logger.warn(
+        `File locked (EPERM/EBUSY): ${outputPath}. Retrying in 5 seconds... (${remainingMessage})`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      return appendResultRow(
+        outputPath,
+        result,
+        activeRound,
+        retries === -1 ? -1 : retries - 1,
+      );
     }
     logger.error(`Failed to write to CSV: ${error.message}`);
     throw error;

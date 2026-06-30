@@ -8,6 +8,7 @@ import type { AmazonSearchResult, BecexProduct } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { randomDelay } from "../utils/delay.js";
 import { humanType, humanClick, moveMouseRandomly, getModifierKey } from "../utils/human-interaction.js";
+import { extractSpecs } from "../utils/product-utils.js";
 import fs from "fs";
 import path from "path";
 
@@ -79,7 +80,7 @@ export class AmazonSearchService {
         const organicAdUrl = "https://www.amazon.com.au/s?k=iphone&crid=1DMGKR2XYUHGW&sprefix=%2Caps%2C286&ref=nb_sb_ss_recent_1_0_recent";
         
         await page.goto(organicAdUrl, {
-          waitUntil: "networkidle",
+          waitUntil: "domcontentloaded",
           timeout: 60000,
         }).catch(err => {
           logger.warn(`Initial navigation warning: ${err.message}`);
@@ -438,13 +439,153 @@ export class AmazonSearchService {
   }
 
   /**
+   * Helper to click a variant swatch by its text.
+   */
+  private async clickVariantByText(page: Page, dimension: string, texts: string[]): Promise<boolean> {
+    try {
+      const argsObj = { dim: dimension, targetTexts: texts };
+      const evalFnStr = `
+        (() => {
+          const { dim, targetTexts } = ${JSON.stringify(argsObj)};
+          const normalize = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const normalizedTargets = targetTexts.map(normalize);
+
+          // Find the specific container for this dimension
+          let container = document.getElementById("inline-twister-row-" + dim) || 
+                          document.getElementById("variation_" + dim) ||
+                          document.querySelector("[id*=\\"" + dim + "\\"]");
+                          
+          if (!container) {
+            // Fallback to general twister containers
+            container = document.querySelector('#twister-plus-inline-twister, #inline-twister-container, #twister');
+          }
+          
+          if (!container) return false;
+
+          // Find all swatch-like elements inside this container
+          const elements = Array.from(container.querySelectorAll('li, button, a, [role="button"], .a-declarative'));
+
+          for (const el of elements) {
+            // Ignore parent elements if they are also in the list
+            if (el.querySelector('li, button, a')) {
+              continue;
+            }
+
+            // Get text content (exclude style tags or scripts if any)
+            let text = "";
+            if (el.firstChild && el.firstChild.nodeType === 3) {
+              text = el.firstChild.textContent || "";
+            } else {
+              const clone = el.cloneNode(true);
+              const style = clone.querySelectorAll('style, script');
+              style.forEach(s => s.remove());
+              text = clone.textContent || "";
+            }
+
+            const title = el.getAttribute('title') || "";
+            const aria = el.getAttribute('aria-label') || "";
+            const id = el.getAttribute('id') || "";
+            
+            let imgAlt = "";
+            const img = el.querySelector('img');
+            if (img) {
+              imgAlt = img.getAttribute('alt') || "";
+            }
+
+            const combined = text + " " + title + " " + aria + " " + id + " " + imgAlt;
+            const normalizedCombined = normalize(combined);
+
+            if (normalizedTargets.some(t => normalizedCombined.includes(t))) {
+              const classList = Array.from(el.classList).join(' ').toLowerCase();
+              const parentClassList = el.parentElement ? Array.from(el.parentElement.classList).join(' ').toLowerCase() : '';
+              const isSelected = classList.includes('selected') || classList.includes('active') || classList.includes('swatchselect') ||
+                                 parentClassList.includes('selected') || parentClassList.includes('active') || parentClassList.includes('swatchselect');
+              
+              if (isSelected) {
+                return true; // Already selected
+              }
+
+              try {
+                el.click();
+                return true;
+              } catch (e) {
+                const clickable = el.querySelector('a, button, input');
+                if (clickable) {
+                  clickable.click();
+                  return true;
+                }
+              }
+            }
+          }
+          return false;
+        })()
+      `;
+      return await page.evaluate(evalFnStr) as boolean;
+    } catch (e) {
+      logger.error(`Error in clickVariantByText: ${(e as Error).message}`);
+      return false;
+    }
+  }
+
+  /**
    * Extracts price from product detail page, clicking "See All Buying Options" if needed.
    */
   async selectVariantsAndGetPrice(
     page: Page,
     product: BecexProduct
   ): Promise<{ price: number | null; cleanUrl: string }> {
-    logger.info(`Extracting Amazon price details for: ${product.productName}`);
+    logger.info(`Selecting Amazon variants & extracting price details for: ${product.productName}`);
+
+    // Wait for the twister/variation container to load if present
+    await page.waitForSelector('#inline-twister-container, #twister, #variation_size_name, #variation_color_name, #twister-plus-inline-twister', { timeout: 6000 }).catch(() => {});
+    
+    // Expand all collapsed twister rows first
+    await page.evaluate(`() => {
+      const headers = Array.from(document.querySelectorAll('[id^="inline-twister-expander-header-"]'));
+      headers.forEach(header => {
+        const label = header.getAttribute('aria-label') || "";
+        if (label.toLowerCase().includes("expand")) {
+          header.click();
+        }
+      });
+    }`).catch(() => {});
+    await randomDelay(1500, 2000);
+
+    // Try selecting storage variant
+    const specs = extractSpecs(product.productName);
+    if (specs.storage.length > 0) {
+      logger.info(`Amazon variant selection: attempting to select storage: ${specs.storage.join(", ")}`);
+      const clicked = await this.clickVariantByText(page, "size_name", specs.storage);
+      if (clicked) {
+        logger.info("Storage variant clicked/verified.");
+        await randomDelay(2000, 3000);
+      } else {
+        logger.warn("Storage variant not found / not clicked.");
+      }
+    }
+
+    // Try selecting color variant
+    if (specs.colors.length > 0) {
+      logger.info(`Amazon variant selection: attempting to select color: ${specs.colors.join(", ")}`);
+      const clicked = await this.clickVariantByText(page, "color_name", specs.colors);
+      if (clicked) {
+        logger.info("Color variant clicked/verified.");
+        await randomDelay(2000, 3000);
+      } else {
+        logger.warn("Color variant not found / not clicked.");
+      }
+    }
+
+    // Try selecting Refurbished/Renewed option if specified
+    const isRefurbished = product.productName.toLowerCase().includes("refurbished") || product.productName.toLowerCase().includes("renewed");
+    if (isRefurbished) {
+      logger.info("Amazon variant selection: product is Refurbished/Renewed. Attempting to select Renewed variant...");
+      const clicked = await this.clickVariantByText(page, "style_name", ["Renewed", "Refurbished"]);
+      if (clicked) {
+        logger.info("Renewed variant clicked/verified.");
+        await randomDelay(2000, 3000);
+      }
+    }
     
     // 1. Try to get price directly first
     let price = await page.evaluate(() => {

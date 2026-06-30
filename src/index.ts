@@ -315,7 +315,9 @@ async function processSingleProduct(
     if (!directMatch) {
       return buildNoMatchResult(product);
     }
-    const specs = extractSpecs(directMatch.title);
+    const decodedUrlForDirectMatch = decodeURIComponent(directMatch.url).replace(/[-_/]/g, " ");
+    const combinedTextForDirectMatch = `${directMatch.title} ${decodedUrlForDirectMatch}`;
+    const specs = extractSpecs(combinedTextForDirectMatch);
     const specStr = [
       specs.cpu.join(", "),
       specs.ram.join(", "),
@@ -428,7 +430,11 @@ async function processSingleProduct(
       }
     }
 
-    const specs = extractSpecs(bestCandidate.title);
+    const pageH1 = await page.locator("h1").first().textContent().catch(() => "") || "";
+    const pageTitleText = await page.title().catch(() => "");
+    const decodedUrl = decodeURIComponent(cleanUrl).replace(/[-_/]/g, " ");
+    const combinedText = `${bestCandidate.title} ${pageH1} ${pageTitleText} ${decodedUrl}`;
+    const specs = extractSpecs(combinedText);
     const specStr = [
       specs.cpu.join(", "),
       specs.ram.join(", "),
@@ -495,7 +501,11 @@ async function processSingleProduct(
   }
 
   const finalTitle = matchedResult.title;
-  const specs = extractSpecs(finalTitle);
+  const pageH1 = await page.locator("h1").first().textContent().catch(() => "") || "";
+  const pageTitleText = await page.title().catch(() => "");
+  const decodedUrl = decodeURIComponent(cleanUrl).replace(/[-_/]/g, " ");
+  const combinedText = `${finalTitle} ${pageH1} ${pageTitleText} ${decodedUrl}`;
+  const specs = extractSpecs(combinedText);
   const specStr = [
     specs.cpu.join(", "),
     specs.ram.join(", "),

@@ -351,16 +351,26 @@ export class ReebeloSearchService {
    * Example: "Gray" should also try "Titanium Gray", "Titanium Grey".
    */
   private static readonly COLOR_ALIASES: ReadonlyMap<string, string[]> = new Map([
-    ["gray",   ["Titanium Gray", "Titanium Grey"]],
-    ["grey",   ["Titanium Gray", "Titanium Grey"]],
-    ["black",  ["Titanium Black", "Titanium Jet Black"]],
-    ["blue",   ["Titanium Blue", "Titanium Silver Blue"]],
-    ["silver", ["Titanium Silver", "Titanium White Silver", "Silver Shadow"]],
-    ["white",  ["Titanium White", "Titanium White Silver"]],
-    ["pink",   ["Titanium Pink", "Titanium Pink Gold"]],
-    ["green",  ["Titanium Green", "Titanium Jade Green", "Midnight Green"]],
-    ["gold",   ["Titanium Gold", "Titanium Pink Gold"]],
-    ["natural",["Titanium Natural", "Natural Titanium"]],
+    ["gray",       ["Titanium Gray", "Titanium Grey", "Graphite", "Space Grey", "Space Gray"]],
+    ["grey",       ["Titanium Gray", "Titanium Grey", "Graphite", "Space Grey", "Space Gray"]],
+    ["black",      ["Titanium Black", "Titanium Jet Black", "Phantom Black", "Space Black"]],
+    ["blue",       ["Titanium Blue", "Titanium Silver Blue", "Pacific Blue", "Sierra Blue"]],
+    ["silver",     ["Titanium Silver", "Titanium White Silver", "Silver Shadow"]],
+    ["white",      ["Titanium White", "Titanium White Silver", "Phantom White"]],
+    ["pink",       ["Titanium Pink", "Titanium Pink Gold"]],
+    ["green",      ["Titanium Green", "Titanium Jade Green", "Midnight Green", "Alpine Green"]],
+    ["gold",       ["Titanium Gold", "Titanium Pink Gold"]],
+    ["natural",    ["Titanium Natural", "Natural Titanium"]],
+    ["graphite",   ["Graphite", "Space Grey", "Space Gray"]],
+    ["pacific blue", ["Pacific Blue", "Blue"]],
+    ["sierra blue",  ["Sierra Blue", "Blue"]],
+    ["midnight green", ["Midnight Green", "Green"]],
+    ["alpine green", ["Alpine Green", "Green"]],
+    ["deep purple",  ["Deep Purple", "Purple"]],
+    ["bronze",     ["Bronze Titanium", "Desert Titanium"]],
+    ["coral",      ["Coral"]],
+    ["teal",       ["Teal"]],
+    ["purple",     ["Deep Purple"]],
   ]);
 
   /**

@@ -69,7 +69,8 @@ export function getSmartSearchQuery(name: string): string {
   const multiWordColors = [
     "Space Grey", "Space Gray", "Space Black", "Titanium Blue", "Titanium Black", 
     "Titanium Grey", "Titanium Gray", "Titanium Natural", "Titanium White",
-    "Alpine Green", "Sierra Blue", "Pacific Blue", "Desert Titanium"
+    "Alpine Green", "Sierra Blue", "Pacific Blue", "Desert Titanium",
+    "Deep Purple", "Phantom Black", "Phantom White", "Midnight Green"
   ];
   for (const color of multiWordColors) {
     smart = smart.replace(new RegExp(`\\s*\\b${color}\\b`, "gi"), "");
@@ -78,7 +79,8 @@ export function getSmartSearchQuery(name: string): string {
   const singleColors = [
     "Grey", "Gray", "Silver", "Black", "White", "Gold", "Pink", "Blue", "Green", 
     "Purple", "Yellow", "Red", "Midnight", "Starlight",
-    "Cream", "Natural", "Violet", "Orange", "Lavender", "Mint"
+    "Cream", "Natural", "Violet", "Orange", "Lavender", "Mint",
+    "Graphite", "Bronze", "Coral", "Teal"
   ];
   for (const color of singleColors) {
     smart = smart.replace(new RegExp(`\\s*\\b${color}\\b`, "gi"), "");
@@ -153,9 +155,11 @@ export function getBroadSearchQuery(name: string): string {
     "Space Grey", "Space Gray", "Space Black", "Titanium Blue", "Titanium Black", 
     "Titanium Grey", "Titanium Gray", "Titanium Natural", "Titanium White",
     "Alpine Green", "Sierra Blue", "Pacific Blue", "Desert Titanium",
+    "Deep Purple", "Phantom Black", "Phantom White", "Midnight Green",
     "Grey", "Gray", "Silver", "Black", "White", "Gold", "Pink", "Blue", "Green", 
     "Purple", "Yellow", "Red", "Midnight", "Starlight",
-    "Cream", "Natural", "Violet", "Orange", "Lavender", "Mint"
+    "Cream", "Natural", "Violet", "Orange", "Lavender", "Mint",
+    "Graphite", "Bronze", "Coral", "Teal"
   ];
   for (const color of allColors) {
     broad = broad.replace(new RegExp(`\\s*\\b${color}\\b`, "gi"), "");
@@ -218,9 +222,11 @@ export function extractSpecs(name: string): {
     "Space Grey", "Space Gray", "Space Black", "Titanium Blue", "Titanium Black", 
     "Titanium Grey", "Titanium Gray", "Titanium Natural", "Titanium White",
     "Alpine Green", "Sierra Blue", "Pacific Blue", "Desert Titanium",
+    "Deep Purple", "Phantom Black", "Phantom White", "Midnight Green",
     "Grey", "Gray", "Silver", "Black", "White", "Gold", "Pink", "Blue", "Green", 
     "Purple", "Yellow", "Red", "Midnight", "Starlight",
-    "Cream", "Natural", "Titanium", "Violet", "Orange", "Lavender", "Mint"
+    "Cream", "Natural", "Titanium", "Violet", "Orange", "Lavender", "Mint",
+    "Graphite", "Bronze", "Coral", "Teal"
   ];
 
   const foundColors: string[] = [];
