@@ -347,23 +347,22 @@ export class ReebeloSearchService {
 
     // 3. Condition selection (now available after storage+color)
     // Mapping: Pristine -> 'Like New', Excellent -> 'Very Good'
-    // Pass expected specs (storage+color) to verify product config didn't change
-    // after clicking a condition option.
-    const expectedSpecs = [...specs.storage, ...specs.colors];
     if (isPristine && storeRules?.conditionMapping?.Pristine) {
-      selectedCondition = await this.selectConditionWithVerification(
+      await this.clickReebeloVariant(
         page,
+        "condition",
         storeRules.conditionMapping.Pristine,
         "Condition: Pristine",
-        expectedSpecs,
       );
+      selectedCondition = storeRules.conditionMapping.Pristine[0];
     } else if (isExcellent && storeRules?.conditionMapping?.Excellent) {
-      selectedCondition = await this.selectConditionWithVerification(
+      await this.clickReebeloVariant(
         page,
+        "condition",
         storeRules.conditionMapping.Excellent,
         "Condition: Excellent",
-        expectedSpecs,
       );
+      selectedCondition = storeRules.conditionMapping.Excellent[0];
     }
 
     // 4. Connectivity selection
@@ -461,150 +460,6 @@ export class ReebeloSearchService {
     });
 
     return { price, cleanUrl: page.url(), selectedCondition };
-  }
-
-  /**
-   * Try each target condition in order. After clicking, verify the condition
-   * was actually selected by reading the selected state from the page DOM.
-   * Also verify the product config (storage/color) didn't change.
-   *
-   * Returns the selected condition string.
-   */
-  private async selectConditionWithVerification(
-    page: Page,
-    targetValues: string[],
-    displayName: string,
-    expectedSpecs?: string[],
-  ): Promise<string> {
-    // 1. Check if a target condition is already selected (no click needed)
-    const alreadySelected = await this.readSelectedCondition(
-      page,
-      targetValues,
-    );
-    if (alreadySelected) {
-      logger.info(
-        `  ✓ ${displayName}: "${alreadySelected}" already selected — no click needed.`,
-      );
-      return alreadySelected;
-    }
-
-    // 2. Try clicking each target condition
-    for (const value of targetValues) {
-      const elementId = `e2e-pdp-condition-${value}`;
-      const element = await page.$(`[id="${elementId}"]`).catch(() => null);
-      if (!element) continue;
-
-      const isVisible = await element.isVisible().catch(() => false);
-      if (!isVisible) continue;
-
-      // Check disabled state
-      const isDisabled = await element
-        .evaluate((el: HTMLElement) => {
-          return (
-            el.hasAttribute("disabled") ||
-            el.getAttribute("aria-disabled") === "true" ||
-            el.classList.contains("disabled") ||
-            el.classList.contains("pointer-events-none") ||
-            getComputedStyle(el).pointerEvents === "none" ||
-            parseFloat(getComputedStyle(el).opacity) < 0.5
-          );
-        })
-        .catch(() => false);
-      if (isDisabled) {
-        logger.info(
-          `  ✗ ${displayName}: "${value}" exists but is disabled — skipping.`,
-        );
-        continue;
-      }
-
-      await element.click({ force: true }).catch(() => {});
-      await randomDelay(2000, 3000);
-
-      // 3. Verify: read the actually selected condition from the DOM
-      const nowSelected = await this.readSelectedCondition(page, [
-        value,
-        ...targetValues,
-      ]);
-
-      if (nowSelected && targetValues.includes(nowSelected)) {
-        // Verify product config didn't change (storage/color still correct)
-        if (expectedSpecs && expectedSpecs.length > 0) {
-          const pageStillCorrect = await page
-            .evaluate((specs: string[]) => {
-              const body = document.body.innerText.toLowerCase();
-              return specs.every((s) => body.includes(s.toLowerCase()));
-            }, expectedSpecs)
-            .catch(() => false);
-          if (!pageStillCorrect) {
-            logger.warn(
-              `  ✗ ${displayName}: clicked "${value}" but product config changed — rejecting.`,
-            );
-            continue;
-          }
-        }
-        logger.info(
-          `  ✓ Selected ${displayName}: "${nowSelected}" (DOM verified)`,
-        );
-        return nowSelected;
-      }
-
-      logger.info(
-        `  ✗ ${displayName}: "${value}" clicked but DOM shows "${nowSelected ?? "nothing"}" as selected — not available.`,
-      );
-    }
-
-    // None of the target conditions could be selected
-    throw new Error(
-      `REQUIRED_VARIANT_NOT_FOUND: ${displayName} (${targetValues.join(", ")}) — none available for current spec`,
-    );
-  }
-
-  /**
-   * Read the currently selected condition from the Reebelo page by
-   * checking which condition option has an active/selected visual state.
-   */
-  private async readSelectedCondition(
-    page: Page,
-    targetValues: string[],
-  ): Promise<string | null> {
-    return page.evaluate((targets: string[]) => {
-      const section = document.getElementById("e2e-pdp-condition");
-      if (!section) return null;
-
-      const options = Array.from(
-        section.querySelectorAll<HTMLElement>("[id^='e2e-pdp-condition-']"),
-      );
-
-      for (const opt of options) {
-        const optName = opt.id.replace("e2e-pdp-condition-", "");
-        // Only care about options in our target list
-        if (!targets.some((t) => t.toLowerCase() === optName.toLowerCase()))
-          continue;
-
-        const cs = getComputedStyle(opt);
-
-        // Heuristic: check for visual indicators of "selected" state
-        if (
-          opt.classList.contains("selected") ||
-          opt.classList.contains("active") ||
-          opt.classList.contains("checked") ||
-          opt.getAttribute("aria-selected") === "true" ||
-          opt.getAttribute("aria-current") === "true" ||
-          opt.hasAttribute("data-selected") ||
-          opt.hasAttribute("data-active") ||
-          parseFloat(cs.fontWeight) >= 600 ||
-          cs.fontWeight === "bold" ||
-          cs.textDecoration.includes("underline") ||
-          (cs.borderWidth !== "0px" &&
-            cs.borderStyle !== "none" &&
-            cs.borderColor !== "transparent")
-        ) {
-          return optName;
-        }
-      }
-
-      return null;
-    }, targetValues);
   }
 
   /**
@@ -709,25 +564,6 @@ export class ReebeloSearchService {
       if (element) {
         const isVisible = await element.isVisible().catch(() => false);
         if (isVisible) {
-          // Check if the element is disabled (grayed out for current spec)
-          const isDisabled = await element
-            .evaluate((el: HTMLElement) => {
-              return (
-                el.hasAttribute("disabled") ||
-                el.getAttribute("aria-disabled") === "true" ||
-                el.classList.contains("disabled") ||
-                el.classList.contains("pointer-events-none") ||
-                getComputedStyle(el).pointerEvents === "none" ||
-                parseFloat(getComputedStyle(el).opacity) < 0.5
-              );
-            })
-            .catch(() => false);
-          if (isDisabled) {
-            logger.info(
-              `  ✗ ${displayName}: "${value}" exists but is disabled for current spec — skipping.`,
-            );
-            continue;
-          }
           await element.click({ force: true }).catch(() => {});
           logger.info(`  ✓ Selected ${displayName}: "${value}" (via ID)`);
           await randomDelay(500, 1000);
@@ -754,19 +590,7 @@ export class ReebeloSearchService {
                 text.toLowerCase().includes(value.toLowerCase()) ||
                 ariaLabel.toLowerCase().includes(value.toLowerCase())
               ) {
-                const el = link as HTMLElement;
-                // Skip disabled / grayed-out options
-                if (
-                  el.hasAttribute("disabled") ||
-                  el.getAttribute("aria-disabled") === "true" ||
-                  el.classList.contains("disabled") ||
-                  el.classList.contains("pointer-events-none") ||
-                  getComputedStyle(el).pointerEvents === "none" ||
-                  parseFloat(getComputedStyle(el).opacity) < 0.5
-                ) {
-                  return "disabled";
-                }
-                el.click();
+                (link as HTMLElement).click();
                 return true;
               }
             }
@@ -775,12 +599,6 @@ export class ReebeloSearchService {
           { sectionId, value },
         );
 
-        if (found === "disabled") {
-          logger.info(
-            `  ✗ ${displayName}: "${value}" exists but is disabled for current spec — skipping.`,
-          );
-          continue;
-        }
         if (found) {
           logger.info(`  ✓ Selected ${displayName}: "${value}" (via section)`);
           await randomDelay(500, 1000);
