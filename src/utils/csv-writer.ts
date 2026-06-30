@@ -14,9 +14,11 @@ import { logger } from "./logger.js";
  * Get the output file path for today's results.
  */
 export function getOutputFilePath(outputDir: string): string {
-  const todayStamp = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const dateStamp = now.toISOString().slice(0, 10);
+  const timeStamp = now.toISOString().slice(11, 19).replace(/:/g, ""); // HHmmss
   const target = process.env.SCRAPER_TARGET || "results";
-  return path.join(outputDir, `${target}_${todayStamp}.csv`);
+  return path.join(outputDir, `${target}_${dateStamp}_${timeStamp}.csv`);
 }
 
 /**

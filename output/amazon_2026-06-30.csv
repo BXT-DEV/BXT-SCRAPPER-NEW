@@ -1,11 +1,25 @@
 SKU;Product Name;link;spec;amazon_price;amazon_title;match_confidence;status;error_message;condition;link_round1
 iPhone125G128GBBlue-VR-ASN-AU;Apple iPhone 12 5G (128GB, Blue) - Pristine;;;;;0;no_match;;;
-iPhone12Pro5G128GBBlue-RD-VR-EXD-AU;Apple iPhone 12 Pro 5G (128GB, Blue) - Excellent;https://www.amazon.com.au/dp/B098P7QYFL;128GB, 128 GB, 128GB, 128 GB | Pacific Blue;395;iPhone 12 Pro 128GB Pacific Blue (Renewed);0.5;matched;;Excellent;https://www.amazon.com.au/dp/B098P7QYFL
+iPhone12Pro5G128GBBlue-RD-VR-EXD-AU;Apple iPhone 12 Pro 5G (128GB, Blue) - Excellent;https://www.amazon.com.au/dp/B0968GVWLZ;128GB, 128 GB, 128GB, 128 GB | Gold;414;Filter by;0.5;matched;;Excellent;https://www.amazon.com.au/dp/B0968GVWLZ
 iPh12Mini5G256GBPurp-VR-ASN-AU;Apple iPhone 12 Mini (256GB, Purple) - Pristine;;;;;0;no_match;;;
 iPhone12Pro5G128GBGold-RD-VR-EXD-AU;Apple iPhone 12 Pro 5G (128GB, Gold) - Excellent;;;;;0;no_match;;;
 iPhone12Pro5G128GBSpG-RD-VR-EXD-AU;Apple iPhone 12 Pro 5G (128GB, Graphite) - Excellent;;;;;0;no_match;;;
-iPhone12Pro5G128GBSilv-RD-VR-EXD-AU;Apple iPhone 12 Pro 5G (128GB, Silver) - Excellent;;;;;0;no_match;;;
-iP12Pro5G256GBBlue-RD-VR-EXD-AU;Apple iPhone 12 Pro 5G (256GB, Blue) - Excellent;;;;;0;no_match;;;
+iPhone12Pro5G128GBSilv-RD-VR-EXD-AU;Apple iPhone 12 Pro 5G (128GB, Silver) - Excellent;https://www.amazon.com.au/dp/B0968GVWLZ;128GB, 128 GB, 128GB, 128 GB | Gold;414;"Product summary presents key product information       Keyboard shortcut  
+                        Shift
+                        +
+                         Alt
+                        +
+                        opt
+                        +
+                        D";0.5;matched;;Excellent;https://www.amazon.com.au/dp/B0968GVWLZ
+iP12Pro5G256GBBlue-RD-VR-EXD-AU;Apple iPhone 12 Pro 5G (256GB, Blue) - Excellent;https://www.amazon.com.au/dp/B0968GVWLZ;128GB, 128 GB, 128GB, 128 GB | Gold;414;"Product summary presents key product information       Keyboard shortcut  
+                        Shift
+                        +
+                         Alt
+                        +
+                        opt
+                        +
+                        D";0.5;matched;;Excellent;https://www.amazon.com.au/dp/B0968GVWLZ
 iP12MN64GBPurp-VR-ASN-AU;Apple iPhone 12 Mini (64GB, Purple) - Pristine;;;;;0;no_match;;;
 iP12Pro5G256GBSilv-RD-VR-EXD-AU;Apple iPhone 12 Pro 5G (256GB, Silver) - Excellent;;;;;0;no_match;;;
 iPh12Mini5G128GBBlck-VR-ASN-AU;Apple iPhone 12 Mini 5G (128GB, Black) - Pristine;;;;;0;no_match;;;

@@ -8,36 +8,22 @@
     "stores": {
       "reebelo": {
         "conditionMapping": {
-          "Pristine": [
-            "Like New",
-            "Pristine",
-            "Premium"
-          ],
-          "Excellent": [
-            "Very Good",
-            "Excellent"
-          ]
+          "Pristine": ["Like New", "Pristine", "Premium"],
+          "Excellent": ["Very Good", "Excellent"]
         },
         "batteryPolicy": "Standard Only",
         "simPolicy": "Physical Only"
       },
       "backmarket": {
         "conditionMapping": {
-          "Pristine": [
-            "Excellent"
-          ],
-          "Excellent": [
-            "Good"
-          ]
+          "Pristine": ["Excellent"],
+          "Excellent": ["Good"]
         },
         "simPolicy": "Physical Only"
       },
       "amazon": {
         "conditionMapping": {
-          "Excellent": [
-            "Excellent",
-            "Renewed"
-          ]
+          "Excellent": ["Excellent", "Renewed"]
         },
         "excludePristine": true,
         "excludeVeryGood": true,

@@ -20,8 +20,8 @@ https://www.backmarket.com.au/
 [https://www.amazon.com.au](https://www.amazon.com.au)
 
 Yang harus diperhatikan di toko Reebelo.com.au  
-1\. Untuk kondisi Pristine kita ambil kondisi di Reebelo Premium.  
-2\. Untuk kondisi Excellent kita ambil kondisi di Reebelo Excellent.  
+1\. Untuk kondisi Pristine kita ambil kondisi di Reebelo Like New.  
+2\. Untuk kondisi Excellent kita ambil kondisi di Reebelo Very Good.  
 ![][image1]
 
 3\. Batterynya hanya yang Standard Battery.  

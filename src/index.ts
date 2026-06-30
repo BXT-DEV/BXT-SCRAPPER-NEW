@@ -3,7 +3,11 @@
 // Coordinates: CSV → Search → Match → Scrape Price → Output
 // ============================================================
 
-import { config, reloadGeminiKeys, VALID_TARGETS_BY_CATEGORY } from "./config/index.js";
+import {
+  config,
+  reloadGeminiKeys,
+  VALID_TARGETS_BY_CATEGORY,
+} from "./config/index.js";
 import { logger } from "./utils/logger.js";
 import { readProductsCsv } from "./utils/csv-reader.js";
 import {
@@ -14,7 +18,10 @@ import {
   getActiveRound,
 } from "./utils/csv-writer.js";
 import { randomDelay } from "./utils/delay.js";
-import { updateScraperStatus, clearScraperStatus } from "./utils/status-manager.js";
+import {
+  updateScraperStatus,
+  clearScraperStatus,
+} from "./utils/status-manager.js";
 import { BrowserService } from "./services/browser.service.js";
 import { AmazonSearchService } from "./services/amazon-search.service.js";
 import { JbHifiSearchService } from "./services/jbhifi-search.service.js";
@@ -31,8 +38,18 @@ import { CentrecomSearchService } from "./services/centrecom-search.service.js";
 import { DigidirectSearchService } from "./services/digidirect-search.service.js";
 import { GeorgesSearchService } from "./services/georges-search.service.js";
 import { GeminiMatcherService } from "./services/gemini-matcher.service.js";
-import { getSmartSearchQuery, getBroadSearchQuery, extractSpecs } from "./utils/product-utils.js";
-import type { BecexProduct, ScrapedResult, AmazonSearchResult, DetailedCandidate, ScraperTarget } from "./types/index.js";
+import {
+  getSmartSearchQuery,
+  getBroadSearchQuery,
+  extractSpecs,
+} from "./utils/product-utils.js";
+import type {
+  BecexProduct,
+  ScrapedResult,
+  AmazonSearchResult,
+  DetailedCandidate,
+  ScraperTarget,
+} from "./types/index.js";
 import fs from "fs";
 import type { Page } from "playwright";
 import { loadRules } from "./utils/rules-manager.js";
@@ -42,6 +59,7 @@ const sleep = promisify(setTimeout);
 
 // ── Graceful Shutdown ──────────────────────────────────────
 let isShuttingDown = false;
+let currentOutputPath: string | undefined;
 
 function setupGracefulShutdown(browserService: BrowserService): void {
   const handleShutdown = async (signal: string) => {
@@ -50,12 +68,13 @@ function setupGracefulShutdown(browserService: BrowserService): void {
     logger.warn(`Received ${signal}. Shutting down gracefully...`);
     try {
       const { convertCsvToExcel } = await import("./utils/excel-writer.js");
-      const { getOutputFilePath } = await import("./utils/csv-writer.js");
-      const { config } = await import("./config/index.js");
-      const outputPath = getOutputFilePath(config.outputDir);
-      await convertCsvToExcel(outputPath);
+      if (currentOutputPath) {
+        await convertCsvToExcel(currentOutputPath);
+      }
     } catch (e) {
-      logger.error(`Failed to generate Excel on shutdown: ${(e as Error).message}`);
+      logger.error(
+        `Failed to generate Excel on shutdown: ${(e as Error).message}`,
+      );
     }
 
     process.exit(0);
@@ -74,7 +93,7 @@ function buildMatchedResult(
   amazonPrice: number | null,
   confidence: number,
   spec?: string,
-  condition?: string
+  condition?: string,
 ): ScrapedResult {
   return {
     sku: product.sku,
@@ -103,7 +122,10 @@ function buildNoMatchResult(product: BecexProduct): ScrapedResult {
   };
 }
 
-function buildErrorResult(product: BecexProduct, errorMessage: string): ScrapedResult {
+function buildErrorResult(
+  product: BecexProduct,
+  errorMessage: string,
+): ScrapedResult {
   return {
     sku: product.sku,
     productName: product.productName,
@@ -158,7 +180,11 @@ function cleanAmazonUrl(rawUrl: string): string {
   }
 }
 
-async function waitForNewGeminiKeys(matcherService: GeminiMatcherService, currentKeys: string[], target: ScraperTarget): Promise<void> {
+async function waitForNewGeminiKeys(
+  matcherService: GeminiMatcherService,
+  currentKeys: string[],
+  target: ScraperTarget,
+): Promise<void> {
   logger.warn("═══════════════════════════════════════════");
   logger.warn(" ⏸️  SCRAPER PAUSED: All Gemini Keys Exhausted ");
   logger.warn(" Please update .env with new API keys.      ");
@@ -170,10 +196,10 @@ async function waitForNewGeminiKeys(matcherService: GeminiMatcherService, curren
   while (true) {
     await sleep(10000); // Check every 10 seconds
     const newKeys = reloadGeminiKeys(target);
-    
+
     // Check if there are any keys not in the old set
-    const hasNewKeys = newKeys.some(k => !oldKeysSet.has(k));
-    
+    const hasNewKeys = newKeys.some((k) => !oldKeysSet.has(k));
+
     if (hasNewKeys) {
       logger.info("✨ New Gemini API keys detected! Resuming...");
       matcherService.updateKeys(newKeys);
@@ -189,7 +215,7 @@ function getResultCondition(
   category: string,
   matchedTitle: string,
   matchedUrl: string,
-  selectedConditionFromPicker?: string
+  selectedConditionFromPicker?: string,
 ): string {
   if (category !== "MAPPING REFURBISHED") {
     return "Brand New";
@@ -207,12 +233,21 @@ function getResultCondition(
 
     if (storeRules?.conditionMapping) {
       const pristineSuffix = catRules?.skuMappings?.Pristine || "-VR-ASN-AU";
-      const excellentSuffix = catRules?.skuMappings?.Excellent || "-RD-VR-EXD-AU";
+      const excellentSuffix =
+        catRules?.skuMappings?.Excellent || "-RD-VR-EXD-AU";
       const veryGoodSuffix = catRules?.skuMappings?.["Very Good"] || "-VGC-AU";
 
-      const isPristine = product.sku.endsWith(pristineSuffix) || product.productName.toLowerCase().includes("pristine");
-      const isExcellent = product.sku.includes(excellentSuffix) || product.sku.includes("EXD-AU") || product.productName.toLowerCase().includes("excellent");
-      const isVeryGood = product.sku.includes(veryGoodSuffix) || product.productName.toLowerCase().includes("very good") || product.productName.toLowerCase().includes("vgc");
+      const isPristine =
+        product.sku.endsWith(pristineSuffix) ||
+        product.productName.toLowerCase().includes("pristine");
+      const isExcellent =
+        product.sku.includes(excellentSuffix) ||
+        product.sku.includes("EXD-AU") ||
+        product.productName.toLowerCase().includes("excellent");
+      const isVeryGood =
+        product.sku.includes(veryGoodSuffix) ||
+        product.productName.toLowerCase().includes("very good") ||
+        product.productName.toLowerCase().includes("vgc");
 
       if (isPristine && storeRules.conditionMapping.Pristine) {
         return storeRules.conditionMapping.Pristine[0];
@@ -230,9 +265,16 @@ function getResultCondition(
 
   // Fallback keyword matching on title/URL
   const titleLower = matchedTitle.toLowerCase();
-  if (titleLower.includes("pristine") || titleLower.includes("like new") || titleLower.includes("premium")) {
+  if (
+    titleLower.includes("pristine") ||
+    titleLower.includes("like new") ||
+    titleLower.includes("premium")
+  ) {
     return "Pristine";
-  } else if (titleLower.includes("excellent") || titleLower.includes("very good")) {
+  } else if (
+    titleLower.includes("excellent") ||
+    titleLower.includes("very good")
+  ) {
     return "Excellent";
   } else if (titleLower.includes("good")) {
     return "Good";
@@ -247,14 +289,32 @@ function getResultCondition(
 
 async function processSingleProduct(
   product: BecexProduct,
-  searchService: AmazonSearchService | JbHifiSearchService | KoganSearchService | PhonebotSearchService | ReebeloSearchService | BackmarketSearchService | MobilecitiSearchService | BuymobileSearchService | SpectronicSearchService | BestmobilephoneSearchService | ScorptecSearchService | CentrecomSearchService | DigidirectSearchService | GeorgesSearchService,
+  searchService:
+    | AmazonSearchService
+    | JbHifiSearchService
+    | KoganSearchService
+    | PhonebotSearchService
+    | ReebeloSearchService
+    | BackmarketSearchService
+    | MobilecitiSearchService
+    | BuymobileSearchService
+    | SpectronicSearchService
+    | BestmobilephoneSearchService
+    | ScorptecSearchService
+    | CentrecomSearchService
+    | DigidirectSearchService
+    | GeorgesSearchService,
   matcherService: GeminiMatcherService | null,
   page: Page,
-  target: ScraperTarget
+  target: ScraperTarget,
 ): Promise<ScrapedResult> {
   // Pre-filter: Exclude accessories
   const accessoryKeywords = ["Protector", "Case", "Cover", "Glass"];
-  if (accessoryKeywords.some(keyword => product.productName.toLowerCase().includes(keyword.toLowerCase()))) {
+  if (
+    accessoryKeywords.some((keyword) =>
+      product.productName.toLowerCase().includes(keyword.toLowerCase()),
+    )
+  ) {
     logger.info(`Skipping accessory item: ${product.productName}`);
     return buildNoMatchResult(product);
   }
@@ -268,14 +328,18 @@ async function processSingleProduct(
       if (storeRules.excludePristine) {
         const pristineSuffix = catRules.skuMappings?.Pristine || "-VR-ASN-AU";
         if (product.sku.endsWith(pristineSuffix)) {
-          logger.info(`Skipping Pristine item (${product.sku}) for ${target} mapping (per rules).`);
+          logger.info(
+            `Skipping Pristine item (${product.sku}) for ${target} mapping (per rules).`,
+          );
           return buildNoMatchResult(product);
         }
       }
       if (storeRules.excludeVeryGood) {
         const vgSuffix = catRules.skuMappings?.["Very Good"] || "-VGC-AU";
         if (product.sku.endsWith(vgSuffix)) {
-          logger.info(`Skipping Very Good item (${product.sku}) for ${target} mapping (per rules).`);
+          logger.info(
+            `Skipping Very Good item (${product.sku}) for ${target} mapping (per rules).`,
+          );
           return buildNoMatchResult(product);
         }
       }
@@ -294,7 +358,9 @@ async function processSingleProduct(
 
   // Fallback: If smart query returns nothing, try the broader query
   if (searchResults.length === 0 && smartQuery !== broadQuery) {
-    logger.info(`  Smart query returned 0 results. Retrying with broad query...`);
+    logger.info(
+      `  Smart query returned 0 results. Retrying with broad query...`,
+    );
     searchResults = await searchService.searchProduct(page, broadQuery);
   }
 
@@ -306,38 +372,84 @@ async function processSingleProduct(
 
   // Fast path for nested stores (e.g., Reebelo) — one product page = all variants.
   // Deterministic variant selection, no Gemini needed.
-  const hasMatchDirectly = typeof (searchService as any).matchDirectly === "function";
-  logger.info(`matchDirectly available: ${hasMatchDirectly} (service: ${searchService.constructor.name})`);
+  const hasMatchDirectly =
+    typeof (searchService as any).matchDirectly === "function";
+  logger.info(
+    `matchDirectly available: ${hasMatchDirectly} (service: ${searchService.constructor.name})`,
+  );
 
   if (hasMatchDirectly) {
     logger.info(`Using direct matching for ${product.productName}`);
-    const directMatch = await (searchService as any).matchDirectly(page, product, searchResults);
+    const directMatch = await (searchService as any).matchDirectly(
+      page,
+      product,
+      searchResults,
+    );
     if (!directMatch) {
       return buildNoMatchResult(product);
     }
-    const decodedUrlForDirectMatch = decodeURIComponent(directMatch.url).replace(/[-_/]/g, " ");
+    const decodedUrlForDirectMatch = decodeURIComponent(
+      directMatch.url,
+    ).replace(/[-_/]/g, " ");
     const combinedTextForDirectMatch = `${directMatch.title} ${decodedUrlForDirectMatch}`;
     const specs = extractSpecs(combinedTextForDirectMatch);
-    const specStr = [
-      specs.cpu.join(", "),
-      specs.ram.join(", "),
-      specs.storage.join(", "),
-      specs.colors.join(", "),
-      specs.connectivity.join(", ")
-    ].filter(Boolean).join(" | ") || "No specs detected";
+    const specStr =
+      [
+        specs.cpu.join(", "),
+        specs.ram.join(", "),
+        specs.storage.join(", "),
+        specs.colors.join(", "),
+        specs.connectivity.join(", "),
+      ]
+        .filter(Boolean)
+        .join(" | ") || "No specs detected";
 
-    const conditionStr = getResultCondition(product, target, config.mappingCategory, directMatch.title, directMatch.url);
-    return buildMatchedResult(product, directMatch.url, directMatch.title, directMatch.price, 1.0, specStr, conditionStr);
+    const conditionStr = getResultCondition(
+      product,
+      target,
+      config.mappingCategory,
+      directMatch.title,
+      directMatch.url,
+      directMatch.selectedCondition,
+    );
+    return buildMatchedResult(
+      product,
+      directMatch.url,
+      directMatch.title,
+      directMatch.price,
+      1.0,
+      specStr,
+      conditionStr,
+    );
   }
 
   // ── No-AI fast path: take first search result directly ─────────────
   if (config.noAi) {
-    logger.info(`[NO_AI] Finding best candidate from search results (deterministic matching)...`);
+    logger.info(
+      `[NO_AI] Finding best candidate from search results (deterministic matching)...`,
+    );
     const cleanName = product.productName.toLowerCase();
     const nameSpecs = extractSpecs(product.productName);
 
-    const accessoryKeywords = ["case", "cover", "protector", "glass", "strap", "band", "sleeve", "pouch", "housing", "cable", "charger", "holder", "mount", "cap"];
-    const queryHasAccessory = accessoryKeywords.some(kw => cleanName.includes(kw));
+    const accessoryKeywords = [
+      "case",
+      "cover",
+      "protector",
+      "glass",
+      "strap",
+      "band",
+      "sleeve",
+      "pouch",
+      "housing",
+      "cable",
+      "charger",
+      "holder",
+      "mount",
+      "cap",
+    ];
+    const queryHasAccessory = accessoryKeywords.some((kw) =>
+      cleanName.includes(kw),
+    );
 
     let bestCandidate = null;
 
@@ -346,38 +458,67 @@ async function processSingleProduct(
 
       // 1. Accessory check
       if (!queryHasAccessory) {
-        const resultHasAccessory = accessoryKeywords.some(kw => resTitle.includes(kw));
+        const resultHasAccessory = accessoryKeywords.some((kw) =>
+          resTitle.includes(kw),
+        );
         if (resultHasAccessory) {
-          logger.info(`  Skipping "${result.title}" (Reason: Query is not an accessory, but result title contains accessory keyword)`);
+          logger.info(
+            `  Skipping "${result.title}" (Reason: Query is not an accessory, but result title contains accessory keyword)`,
+          );
           continue;
         }
       }
 
       // 2. Core Model Token Match
       const mainTokens = cleanName
-        .replace(/apple|samsung|sony|canon|nikon|oppo|nintendo|google|microsoft/g, "")
+        .replace(
+          /apple|samsung|sony|canon|nikon|oppo|nintendo|google|microsoft/g,
+          "",
+        )
         .replace(/\d+\s*(gb|tb|mb)/g, "")
         .replace(/\b(cellular|wifi|wi-fi|gps|lte|5g|4g|3g)\b/g, "")
-        .replace(/\b(excellent|pristine|good|very good|refurbished|renewed|brand new)\b/g, "")
-        .replace(/\b(grey|gray|silver|black|white|gold|pink|blue|green|purple|yellow|red|midnight|starlight)\b/g, "")
+        .replace(
+          /\b(excellent|pristine|good|very good|refurbished|renewed|brand new)\b/g,
+          "",
+        )
+        .replace(
+          /\b(grey|gray|silver|black|white|gold|pink|blue|green|purple|yellow|red|midnight|starlight)\b/g,
+          "",
+        )
         .replace(/[(),\-]/g, " ")
         .split(/\s+/)
-        .filter(t => t.length > 1);
+        .filter((t) => t.length > 1);
 
-      const matchesModel = mainTokens.every(token => resTitle.includes(token));
+      const matchesModel = mainTokens.every((token) =>
+        resTitle.includes(token),
+      );
       if (!matchesModel) {
-        logger.info(`  Skipping "${result.title}" (Reason: Main model tokens [${mainTokens.join(", ")}] not found)`);
+        logger.info(
+          `  Skipping "${result.title}" (Reason: Main model tokens [${mainTokens.join(", ")}] not found)`,
+        );
         continue;
       }
 
       // 3. Modifier Match (Pro, Max, Mini, FE, Plus, etc.)
-      const modelModifiers = ["mini", "pro", "max", "ultra", "plus", "s", "xs", "xr", "fe"];
+      const modelModifiers = [
+        "mini",
+        "pro",
+        "max",
+        "ultra",
+        "plus",
+        "s",
+        "xs",
+        "xr",
+        "fe",
+      ];
       let modifierMismatch = false;
       for (const mod of modelModifiers) {
         const nameHasMod = new RegExp(`\\b${mod}\\b`, "i").test(cleanName);
         const resHasMod = new RegExp(`\\b${mod}\\b`, "i").test(resTitle);
         if (nameHasMod !== resHasMod) {
-          logger.info(`  Skipping "${result.title}" (Reason: Modifier "${mod}" mismatch. Target: ${nameHasMod}, Result: ${resHasMod})`);
+          logger.info(
+            `  Skipping "${result.title}" (Reason: Modifier "${mod}" mismatch. Target: ${nameHasMod}, Result: ${resHasMod})`,
+          );
           modifierMismatch = true;
           break;
         }
@@ -385,16 +526,23 @@ async function processSingleProduct(
       if (modifierMismatch) continue;
 
       // 4. Storage Match
-      const supportsVariantPicker = "selectVariantsAndGetPrice" in searchService || typeof (searchService as any).matchDirectly === "function";
+      const supportsVariantPicker =
+        "selectVariantsAndGetPrice" in searchService ||
+        typeof (searchService as any).matchDirectly === "function";
       if (!supportsVariantPicker && nameSpecs.storage.length > 0) {
         const resSpecs = extractSpecs(result.title);
         if (resSpecs.storage.length > 0) {
-          const normStorage = (s: string) => s.replace(/\s+/g, "").toLowerCase();
+          const normStorage = (s: string) =>
+            s.replace(/\s+/g, "").toLowerCase();
           const nameStorageNorm = nameSpecs.storage.map(normStorage);
           const resStorageNorm = resSpecs.storage.map(normStorage);
-          const hasStorageMatch = nameStorageNorm.some(ns => resStorageNorm.includes(ns));
+          const hasStorageMatch = nameStorageNorm.some((ns) =>
+            resStorageNorm.includes(ns),
+          );
           if (!hasStorageMatch) {
-            logger.info(`  Skipping "${result.title}" (Reason: Storage mismatch. Target: [${nameSpecs.storage.join(", ")}], Result: [${resSpecs.storage.join(", ")}])`);
+            logger.info(
+              `  Skipping "${result.title}" (Reason: Storage mismatch. Target: [${nameSpecs.storage.join(", ")}], Result: [${resSpecs.storage.join(", ")}])`,
+            );
             continue;
           }
         }
@@ -405,21 +553,28 @@ async function processSingleProduct(
     }
 
     if (!bestCandidate) {
-      logger.warn(`[NO_AI] No deterministic match found for: ${product.productName}`);
+      logger.warn(
+        `[NO_AI] No deterministic match found for: ${product.productName}`,
+      );
       return buildNoMatchResult(product);
     }
 
     logger.info(`[NO_AI] Selected candidate: "${bestCandidate.title}"`);
 
     // Navigate to detail page and extract price
-    await page.goto(bestCandidate.url, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.goto(bestCandidate.url, {
+      waitUntil: "domcontentloaded",
+      timeout: 30000,
+    });
 
     let price: number | null = null;
     let cleanUrl = bestCandidate.url.split("?")[0];
     let selectedConditionFromPicker: string | undefined;
 
     if ("selectVariantsAndGetPrice" in searchService) {
-      const variantResult = await (searchService as any).selectVariantsAndGetPrice(page, product, bestCandidate.url);
+      const variantResult = await (
+        searchService as any
+      ).selectVariantsAndGetPrice(page, product, bestCandidate.url);
       price = variantResult.price;
       cleanUrl = variantResult.cleanUrl;
       selectedConditionFromPicker = variantResult.selectedCondition;
@@ -430,22 +585,47 @@ async function processSingleProduct(
       }
     }
 
-    const pageH1 = await page.locator("h1").first().textContent().catch(() => "") || "";
+    const pageH1 =
+      (await page
+        .locator("h1")
+        .first()
+        .textContent()
+        .catch(() => "")) || "";
     const pageTitleText = await page.title().catch(() => "");
     const decodedUrl = decodeURIComponent(cleanUrl).replace(/[-_/]/g, " ");
     const combinedText = `${bestCandidate.title} ${pageH1} ${pageTitleText} ${decodedUrl}`;
     const specs = extractSpecs(combinedText);
-    const specStr = [
-      specs.cpu.join(", "),
-      specs.ram.join(", "),
-      specs.storage.join(", "),
-      specs.colors.join(", "),
-      specs.connectivity.join(", ")
-    ].filter(Boolean).join(" | ") || "No specs detected";
+    const specStr =
+      [
+        specs.cpu.join(", "),
+        specs.ram.join(", "),
+        specs.storage.join(", "),
+        specs.colors.join(", "),
+        specs.connectivity.join(", "),
+      ]
+        .filter(Boolean)
+        .join(" | ") || "No specs detected";
 
-    const conditionStr = getResultCondition(product, target, config.mappingCategory, bestCandidate.title, cleanUrl, selectedConditionFromPicker);
+    // Use the page H1 after variant selection as the output title (more complete than search result title)
+    const outputTitle = pageH1.trim() || bestCandidate.title;
+    const conditionStr = getResultCondition(
+      product,
+      target,
+      config.mappingCategory,
+      outputTitle,
+      cleanUrl,
+      selectedConditionFromPicker,
+    );
 
-    return buildMatchedResult(product, cleanUrl, bestCandidate.title, price, 0.5, specStr, conditionStr);
+    return buildMatchedResult(
+      product,
+      cleanUrl,
+      outputTitle,
+      price,
+      0.5,
+      specStr,
+      conditionStr,
+    );
   }
 
   // Standard path: AI-powered candidate evaluation (for stores without nested variants)
@@ -453,35 +633,53 @@ async function processSingleProduct(
   try {
     screenshot = await page.screenshot({ fullPage: false, timeout: 5000 });
   } catch (screenshotError) {
-    logger.warn(`⚠️ Warning: page.screenshot failed or timed out: ${(screenshotError as Error).message}.`);
+    logger.warn(
+      `⚠️ Warning: page.screenshot failed or timed out: ${(screenshotError as Error).message}.`,
+    );
   }
 
   // 1. Identify candidates
-  const candidates = await matcherService!.getTopCandidates(product, searchResults);
+  const candidates = await matcherService!.getTopCandidates(
+    product,
+    searchResults,
+  );
   const detailedCandidates: DetailedCandidate[] = [];
 
   // 2. Gather details
   for (const candidate of candidates) {
     const result = searchResults[candidate.index];
     logger.info(`Inspecting candidate [${candidate.index}]: ${result.title}`);
-    
-    await page.goto(result.url, { waitUntil: "domcontentloaded", timeout: 30000 });
-    const details = await page.evaluate(() => document.body.innerText.substring(0, 1000));
+
+    await page.goto(result.url, {
+      waitUntil: "domcontentloaded",
+      timeout: 30000,
+    });
+    const details = await page.evaluate(() =>
+      document.body.innerText.substring(0, 1000),
+    );
     detailedCandidates.push({ ...result, index: candidate.index, details });
   }
 
   // 3. Confirm match
-  const matchResult = await matcherService!.confirmMatch(product, detailedCandidates);
+  const matchResult = await matcherService!.confirmMatch(
+    product,
+    detailedCandidates,
+  );
 
   if (!matchResult.isMatch || matchResult.matchedResultIndex < 0) {
     return buildNoMatchResult(product);
   }
 
   const matchedResult = searchResults[matchResult.matchedResultIndex];
-  
+
   // Step 3: Finalize and extract price
-  logger.info(`AI confirmed result [${matchResult.matchedResultIndex}]. Finalizing...`);
-  await page.goto(matchedResult.url, { waitUntil: "domcontentloaded", timeout: 30000 });
+  logger.info(
+    `AI confirmed result [${matchResult.matchedResultIndex}]. Finalizing...`,
+  );
+  await page.goto(matchedResult.url, {
+    waitUntil: "domcontentloaded",
+    timeout: 30000,
+  });
 
   // Step 4: Extract Price from detail page
   let price: number | null = null;
@@ -489,7 +687,11 @@ async function processSingleProduct(
   let selectedConditionFromPicker: string | undefined;
 
   if ("selectVariantsAndGetPrice" in searchService) {
-    const result = await (searchService as any).selectVariantsAndGetPrice(page, product, matchedResult.url);
+    const result = await (searchService as any).selectVariantsAndGetPrice(
+      page,
+      product,
+      matchedResult.url,
+    );
     price = result.price;
     cleanUrl = result.cleanUrl;
     selectedConditionFromPicker = result.selectedCondition;
@@ -500,21 +702,38 @@ async function processSingleProduct(
     }
   }
 
-  const finalTitle = matchedResult.title;
-  const pageH1 = await page.locator("h1").first().textContent().catch(() => "") || "";
+  const searchTitle = matchedResult.title;
+  const pageH1 =
+    (await page
+      .locator("h1")
+      .first()
+      .textContent()
+      .catch(() => "")) || "";
   const pageTitleText = await page.title().catch(() => "");
   const decodedUrl = decodeURIComponent(cleanUrl).replace(/[-_/]/g, " ");
-  const combinedText = `${finalTitle} ${pageH1} ${pageTitleText} ${decodedUrl}`;
+  const combinedText = `${searchTitle} ${pageH1} ${pageTitleText} ${decodedUrl}`;
   const specs = extractSpecs(combinedText);
-  const specStr = [
-    specs.cpu.join(", "),
-    specs.ram.join(", "),
-    specs.storage.join(", "),
-    specs.colors.join(", "),
-    specs.connectivity.join(", ")
-  ].filter(Boolean).join(" | ") || "No specs detected";
+  const specStr =
+    [
+      specs.cpu.join(", "),
+      specs.ram.join(", "),
+      specs.storage.join(", "),
+      specs.colors.join(", "),
+      specs.connectivity.join(", "),
+    ]
+      .filter(Boolean)
+      .join(" | ") || "No specs detected";
 
-  const conditionStr = getResultCondition(product, target, config.mappingCategory, finalTitle, cleanUrl, selectedConditionFromPicker);
+  // Use the page H1 after variant selection as the output title (more complete than search result title)
+  const finalTitle = pageH1.trim() || searchTitle;
+  const conditionStr = getResultCondition(
+    product,
+    target,
+    config.mappingCategory,
+    finalTitle,
+    cleanUrl,
+    selectedConditionFromPicker,
+  );
 
   return buildMatchedResult(
     product,
@@ -523,7 +742,7 @@ async function processSingleProduct(
     price,
     matchResult.confidence,
     specStr,
-    conditionStr
+    conditionStr,
   );
 }
 
@@ -537,15 +756,18 @@ async function main(): Promise<void> {
   logger.info(`  Category : ${config.mappingCategory}`);
   logger.info(`  Target   : ${config.scraperTarget}`);
   logger.info(`  Mode     : ${config.scraperMode.toUpperCase()}`);
-  logger.info(`  AI       : ${config.noAi ? "DISABLED (No AI)" : "ENABLED (Gemini)"}`);
+  logger.info(
+    `  AI       : ${config.noAi ? "DISABLED (No AI)" : "ENABLED (Gemini)"}`,
+  );
   logger.info("═══════════════════════════════════════════");
 
   const products = await readProductsCsv(config.inputCsvPath);
   fs.mkdirSync(config.outputDir, { recursive: true });
 
-  const targets = config.scraperTarget === "all"
-    ? VALID_TARGETS_BY_CATEGORY[config.mappingCategory]
-    : [config.scraperTarget];
+  const targets =
+    config.scraperTarget === "all"
+      ? VALID_TARGETS_BY_CATEGORY[config.mappingCategory]
+      : [config.scraperTarget];
 
   const browserService = new BrowserService(config.proxyUrl);
   setupGracefulShutdown(browserService);
@@ -563,6 +785,7 @@ async function main(): Promise<void> {
     logger.info("═══════════════════════════════════════════");
 
     const outputPath = getOutputFilePath(config.outputDir);
+    currentOutputPath = outputPath;
     let completedSkus = new Set<string>();
     let activeRound = 1;
 
@@ -582,7 +805,7 @@ async function main(): Promise<void> {
       completedSkus = await loadCompletedSkus(outputPath, activeRound);
     }
 
-    const pendingProducts = products.filter(p => !completedSkus.has(p.sku));
+    const pendingProducts = products.filter((p) => !completedSkus.has(p.sku));
     if (pendingProducts.length === 0) {
       logger.info(`Nothing to do for target: ${target}`);
       continue;
@@ -590,40 +813,86 @@ async function main(): Promise<void> {
 
     let searchService;
     if (target === "jbhifi") {
-      searchService = new JbHifiSearchService(config.jbhifiDomain, config.maxSearchResults);
+      searchService = new JbHifiSearchService(
+        config.jbhifiDomain,
+        config.maxSearchResults,
+      );
     } else if (target === "phonebot") {
-      searchService = new PhonebotSearchService(config.phonebotDomain, config.maxSearchResults);
+      searchService = new PhonebotSearchService(
+        config.phonebotDomain,
+        config.maxSearchResults,
+      );
     } else if (target === "kogan") {
-      searchService = new KoganSearchService(config.koganDomain, config.maxSearchResults);
+      searchService = new KoganSearchService(
+        config.koganDomain,
+        config.maxSearchResults,
+      );
     } else if (target === "reebelo") {
-      searchService = new ReebeloSearchService(config.reebeloDomain, config.maxSearchResults);
+      searchService = new ReebeloSearchService(
+        config.reebeloDomain,
+        config.maxSearchResults,
+      );
     } else if (target === "backmarket") {
-      searchService = new BackmarketSearchService(config.backmarketDomain, config.maxSearchResults);
+      searchService = new BackmarketSearchService(
+        config.backmarketDomain,
+        config.maxSearchResults,
+      );
     } else if (target === "mobileciti") {
-      searchService = new MobilecitiSearchService(config.mobilecitiDomain, config.maxSearchResults);
+      searchService = new MobilecitiSearchService(
+        config.mobilecitiDomain,
+        config.maxSearchResults,
+      );
     } else if (target === "buymobile") {
-      searchService = new BuymobileSearchService(config.buymobileDomain, config.maxSearchResults);
+      searchService = new BuymobileSearchService(
+        config.buymobileDomain,
+        config.maxSearchResults,
+      );
     } else if (target === "spectronic") {
-      searchService = new SpectronicSearchService(config.spectronicDomain, config.maxSearchResults);
+      searchService = new SpectronicSearchService(
+        config.spectronicDomain,
+        config.maxSearchResults,
+      );
     } else if (target === "bestmobilephone") {
-      searchService = new BestmobilephoneSearchService(config.bestmobilephoneDomain, config.maxSearchResults);
+      searchService = new BestmobilephoneSearchService(
+        config.bestmobilephoneDomain,
+        config.maxSearchResults,
+      );
     } else if (target === "scorptec") {
-      searchService = new ScorptecSearchService(config.scorptecDomain, config.maxSearchResults);
+      searchService = new ScorptecSearchService(
+        config.scorptecDomain,
+        config.maxSearchResults,
+      );
     } else if (target === "centrecom") {
-      searchService = new CentrecomSearchService(config.centrecomDomain, config.maxSearchResults);
+      searchService = new CentrecomSearchService(
+        config.centrecomDomain,
+        config.maxSearchResults,
+      );
     } else if (target === "digidirect") {
-      searchService = new DigidirectSearchService(config.digidirectDomain, config.maxSearchResults);
+      searchService = new DigidirectSearchService(
+        config.digidirectDomain,
+        config.maxSearchResults,
+      );
     } else if (target === "georges") {
-      searchService = new GeorgesSearchService(config.georgesDomain, config.maxSearchResults);
+      searchService = new GeorgesSearchService(
+        config.georgesDomain,
+        config.maxSearchResults,
+      );
     } else {
-      searchService = new AmazonSearchService(config.amazonDomain, config.maxSearchResults);
+      searchService = new AmazonSearchService(
+        config.amazonDomain,
+        config.maxSearchResults,
+      );
     }
 
     // Load gemini keys for this specific target (skip if NO_AI)
     let matcherService: GeminiMatcherService | null = null;
     if (!config.noAi) {
       const targetKeys = reloadGeminiKeys(target);
-      matcherService = new GeminiMatcherService(targetKeys, config.mappingCategory, target);
+      matcherService = new GeminiMatcherService(
+        targetKeys,
+        config.mappingCategory,
+        target,
+      );
     } else {
       logger.info(`[NO_AI] Gemini matcher disabled — running without AI`);
     }
@@ -637,27 +906,44 @@ async function main(): Promise<void> {
       logger.info(`${progress} [${target}] Processing: ${product.productName}`);
 
       try {
-        const result = await processSingleProduct(product, searchService, matcherService, page, target);
+        const result = await processSingleProduct(
+          product,
+          searchService,
+          matcherService,
+          page,
+          target,
+        );
         await appendResultRow(outputPath, result, activeRound);
 
         const statusEmoji = result.status === "matched" ? "✅" : "❌";
         const priceLog = result.amazonPrice ? ` — A$${result.amazonPrice}` : "";
-        logger.info(`${progress} [${target}] ${statusEmoji} ${result.status}${priceLog}`);
+        logger.info(
+          `${progress} [${target}] ${statusEmoji} ${result.status}${priceLog}`,
+        );
       } catch (error) {
         const errorMessage = (error as Error).message;
         if (errorMessage === "CAPTCHA_DETECTED") {
           logger.error("CAPTCHA detected! Waiting 60s...");
           await randomDelay(60000, 90000);
-          i--; continue;
+          i--;
+          continue;
         }
         // Write error result to CSV so output file always has data
         const errorResult = buildErrorResult(product, errorMessage);
         await appendResultRow(outputPath, errorResult, activeRound);
         logger.error(`${progress} [${target}] ⚠️ Error: ${errorMessage}`);
 
-        if (errorMessage === "ALL_GEMINI_KEYS_EXHAUSTED" && !config.noAi && matcherService) {
+        if (
+          errorMessage === "ALL_GEMINI_KEYS_EXHAUSTED" &&
+          !config.noAi &&
+          matcherService
+        ) {
           updateScraperStatus("paused", "ALL_GEMINI_KEYS_EXHAUSTED");
-          await waitForNewGeminiKeys(matcherService, matcherService.getApiKeys(), target);
+          await waitForNewGeminiKeys(
+            matcherService,
+            matcherService.getApiKeys(),
+            target,
+          );
           i--; // Retry the same product
           continue;
         }
@@ -679,7 +965,9 @@ async function main(): Promise<void> {
       const { convertCsvToExcel } = await import("./utils/excel-writer.js");
       await convertCsvToExcel(outputPath);
     } catch (e) {
-      logger.error(`Failed to generate Excel on complete for ${target}: ${(e as Error).message}`);
+      logger.error(
+        `Failed to generate Excel on complete for ${target}: ${(e as Error).message}`,
+      );
     }
   }
 
@@ -688,11 +976,7 @@ async function main(): Promise<void> {
   logger.info(`Done! All targets finished.`);
 }
 
-main().catch(err => {
+main().catch((err) => {
   logger.error(`Fatal: ${err.message}`);
   process.exit(1);
 });
-
-
-
-

@@ -146,3 +146,5 @@ credentials.db-wal
 /chrome-data/GraphiteDawnCache
 /chrome-data/Default/Site Characteristics Database
 /chrome-data/Default/IndexedDB
+/output
+/output
