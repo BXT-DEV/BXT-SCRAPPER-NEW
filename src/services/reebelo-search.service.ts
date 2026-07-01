@@ -348,21 +348,21 @@ export class ReebeloSearchService {
     // 3. Condition selection (now available after storage+color)
     // Mapping: Pristine -> 'Like New', Excellent -> 'Very Good'
     if (isPristine && storeRules?.conditionMapping?.Pristine) {
-      await this.clickReebeloVariant(
+      const clickedCondition = await this.clickReebeloVariant(
         page,
         "condition",
         storeRules.conditionMapping.Pristine,
         "Condition: Pristine",
       );
-      selectedCondition = storeRules.conditionMapping.Pristine[0];
+      selectedCondition = clickedCondition ?? storeRules.conditionMapping.Pristine[0];
     } else if (isExcellent && storeRules?.conditionMapping?.Excellent) {
-      await this.clickReebeloVariant(
+      const clickedCondition = await this.clickReebeloVariant(
         page,
         "condition",
         storeRules.conditionMapping.Excellent,
         "Condition: Excellent",
       );
-      selectedCondition = storeRules.conditionMapping.Excellent[0];
+      selectedCondition = clickedCondition ?? storeRules.conditionMapping.Excellent[0];
     }
 
     // 4. Connectivity selection
@@ -415,25 +415,58 @@ export class ReebeloSearchService {
     }
 
     // 6. SIM selection
+    // Reebelo uses "simSlot" as the variant type ID, not "sim"
     if (storeRules?.simPolicy === "Physical Only") {
-      const simSuccess = await this.clickReebeloVariant(
+      // Try both "simSlot" (Reebelo's actual ID) and "sim" as fallback
+      let simSuccess = await this.clickReebeloVariant(
         page,
-        "sim",
-        ["Physical SIM", "Dual SIM", "Nano-SIM", "Single SIM"],
+        "simSlot",
+        [
+          "1 Physical SIM + eSIM",
+          "Physical SIM",
+          "Dual SIM",
+          "Nano-SIM",
+          "Single SIM",
+        ],
         "SIM",
         false,
       );
       if (!simSuccess) {
-        const hasEsimOption = await page.evaluate(() => {
+        simSuccess = await this.clickReebeloVariant(
+          page,
+          "sim",
+          [
+            "1 Physical SIM + eSIM",
+            "Physical SIM",
+            "Dual SIM",
+            "Nano-SIM",
+            "Single SIM",
+          ],
+          "SIM",
+          false,
+        );
+      }
+      if (!simSuccess) {
+        const hasEsimOnlyOption = await page.evaluate(() => {
           const title = document.querySelector("h1")?.innerText || "";
           if (title.toLowerCase().includes("esim")) return true;
-          const simSection = document.querySelector("#e2e-pdp-sim");
+          // Check both possible section IDs
+          const simSection =
+            document.querySelector("#e2e-pdp-simSlot") ||
+            document.querySelector("#e2e-pdp-sim");
           if (!simSection) return false;
-          return Array.from(simSection.querySelectorAll("a")).some((a) =>
+          const links = Array.from(simSection.querySelectorAll("a"));
+          // eSIM-only = the ONLY option is eSIM (no physical SIM available)
+          const hasPhysical = links.some((a) => {
+            const txt = a.textContent?.toLowerCase() || "";
+            return txt.includes("physical") || txt.includes("dual") || txt.includes("nano");
+          });
+          if (hasPhysical) return false; // Physical SIM exists, just wasn't matched
+          return links.some((a) =>
             a.textContent?.toLowerCase().includes("esim"),
           );
         });
-        if (hasEsimOption) {
+        if (hasEsimOnlyOption) {
           throw new Error(
             "REQUIRED_VARIANT_NOT_FOUND: Physical SIM (Only eSIM option is available)",
           );
@@ -443,7 +476,72 @@ export class ReebeloSearchService {
 
     await randomDelay(1000, 2000);
 
+    // ── Post-selection validation: verify storage matches ──
+    // The subtitle/h1 may be stale (not updated after variant click).
+    // Instead, check the URL (which updates on variant change) and
+    // the actually-selected storage option in the picker.
+    if (specs.storage.length > 0) {
+      const storageValidation = await page.evaluate(
+        ({ storageValues }) => {
+          // Method 1: Check the selected/active storage option in the picker
+          const storageSection = document.getElementById("e2e-pdp-storage");
+          if (storageSection) {
+            const links = Array.from(storageSection.querySelectorAll("a"));
+            for (const link of links) {
+              // Check for active state: aria-current, data-selected, or active CSS class
+              const isActive =
+                link.getAttribute("aria-current") === "true" ||
+                link.getAttribute("data-selected") === "true" ||
+                link.classList.contains("active") ||
+                link.classList.contains("selected") ||
+                // Reebelo uses a border/outline style for active options
+                getComputedStyle(link).borderColor !== "rgb(229, 229, 229)";
+              if (isActive) {
+                const linkText = link.textContent?.trim().toLowerCase() || "";
+                for (const sv of storageValues) {
+                  if (linkText.includes(sv.toLowerCase())) {
+                    return { matched: true, selectedText: linkText };
+                  }
+                }
+                return { matched: false, selectedText: linkText };
+              }
+            }
+          }
+
+          // Method 2: Check the full page subtitle / breadcrumb
+          const subtitle =
+            document.querySelector(
+              'h1 + p, h1 + div, [class*="subtitle"]',
+            )?.textContent?.trim() || "";
+          const h1 = document.querySelector("h1")?.textContent?.trim() || "";
+          const combined = `${h1} ${subtitle}`.toLowerCase();
+          for (const sv of storageValues) {
+            if (combined.includes(sv.toLowerCase())) {
+              return { matched: true, selectedText: combined };
+            }
+          }
+
+          return { matched: false, selectedText: combined };
+        },
+        { storageValues: specs.storage },
+      );
+
+      // Also check the URL as a final fallback — Reebelo URLs update on variant change
+      const currentUrl = decodeURIComponent(page.url()).toLowerCase();
+      const urlHasStorage = specs.storage.some((s) =>
+        currentUrl.includes(s.toLowerCase()),
+      );
+
+      if (!storageValidation.matched && !urlHasStorage) {
+        throw new Error(
+          `REQUIRED_VARIANT_NOT_FOUND: Storage ${specs.storage.join("/")} ` +
+          `(page shows "${storageValidation.selectedText}" — requested storage not available)`,
+        );
+      }
+    }
+
     const price = await page.evaluate(() => {
+      // 1. Try to find the price from elements matching standard selectors
       const priceSelectors = [
         '[data-testid="product-price"]',
         ".price",
@@ -454,6 +552,41 @@ export class ReebeloSearchService {
         if (el) {
           const match = el.textContent?.replace(/[^0-9.]/g, "");
           if (match) return parseFloat(match);
+        }
+      }
+
+      // 2. Fallback: Scan all span, div, and p elements containing 'A$' or '$'
+      // that are NOT strike/del elements and do not have line-through styling.
+      const allElements = Array.from(document.querySelectorAll("span, div, p"));
+      for (const el of allElements) {
+        const text = el.textContent?.trim() || "";
+        if (text.startsWith("A$") && !text.includes("OFF") && text.length < 25) {
+          // Verify if this element or any of its ancestors is line-through
+          let isLineThrough = false;
+          let current: HTMLElement | null = el as HTMLElement;
+          while (current) {
+            const style = window.getComputedStyle(current);
+            if (
+              current.tagName === "DEL" ||
+              current.tagName === "S" ||
+              current.tagName === "STRIKE" ||
+              style.textDecoration.includes("line-through") ||
+              current.className.includes("line-through") ||
+              current.id.includes("line-through")
+            ) {
+              isLineThrough = true;
+              break;
+            }
+            current = current.parentElement;
+          }
+
+          if (!isLineThrough) {
+            const match = text.replace(/[^0-9.]/g, "");
+            if (match) {
+              const val = parseFloat(match);
+              if (!isNaN(val) && val > 50) return val;
+            }
+          }
         }
       }
       return null;
@@ -534,7 +667,11 @@ export class ReebeloSearchService {
 
   /**
    * Clicks a Reebelo variant using their structured e2e-pdp-* IDs.
-   * Falls back to generic text-based matching if IDs are not found.
+   * Returns the actual value that was clicked, or null if not found.
+   *
+   * For "condition" variant type, Strategy 3 (page-wide text fallback) is
+   * DISABLED to prevent false positives from random page elements containing
+   * condition-like text (e.g., "Excellent" in feature descriptions).
    */
   private async clickReebeloVariant(
     page: Page,
@@ -542,7 +679,7 @@ export class ReebeloSearchService {
     targetValues: string[],
     displayName: string,
     throwOnMiss = true,
-  ): Promise<boolean> {
+  ): Promise<string | null> {
     // Build expanded search list with color aliases
     const expandedValues = [...targetValues];
     if (variantType === "color") {
@@ -567,7 +704,7 @@ export class ReebeloSearchService {
           await element.click({ force: true }).catch(() => {});
           logger.info(`  ✓ Selected ${displayName}: "${value}" (via ID)`);
           await randomDelay(500, 1000);
-          return true;
+          return value;
         }
       }
     }
@@ -602,16 +739,27 @@ export class ReebeloSearchService {
         if (found) {
           logger.info(`  ✓ Selected ${displayName}: "${value}" (via section)`);
           await randomDelay(500, 1000);
-          return true;
+          return value;
         }
       }
     }
 
     // Strategy 3: Fallback to generic text-based matching (legacy approach)
-    const fallbackSuccess = await this.clickVariantByText(page, expandedValues);
-    if (fallbackSuccess) {
-      logger.info(`  ✓ Selected ${displayName} (via text fallback)`);
-      return true;
+    // DISABLED for "condition" — page-wide text scan causes false positives
+    // when random elements contain condition keywords like "Excellent" or "Good".
+    if (variantType !== "condition") {
+      const fallbackSuccess = await this.clickVariantByText(
+        page,
+        expandedValues,
+      );
+      if (fallbackSuccess) {
+        logger.info(`  ✓ Selected ${displayName} (via text fallback)`);
+        return expandedValues[0];
+      }
+    } else {
+      logger.info(
+        `  ⚠ Skipping text fallback for condition (prevents false positives)`,
+      );
     }
 
     if (throwOnMiss) {
@@ -623,7 +771,7 @@ export class ReebeloSearchService {
     logger.warn(
       `  ✗ Could not find ${displayName}: ${targetValues.join(", ")}`,
     );
-    return false;
+    return null;
   }
 
   private async clickVariantByText(
