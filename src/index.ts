@@ -772,7 +772,7 @@ async function main(): Promise<void> {
   const browserService = new BrowserService(config.proxyUrl);
   setupGracefulShutdown(browserService);
   await browserService.initialize();
-  const page = await browserService.newPage();
+  let page = await browserService.newPage();
 
   for (const target of targets) {
     if (isShuttingDown) break;
@@ -899,6 +899,30 @@ async function main(): Promise<void> {
 
     for (let i = 0; i < pendingProducts.length; i++) {
       if (isShuttingDown) break;
+
+      // Recreate page every 40 products to prevent memory leaks and crashes
+      if (i > 0 && i % 40 === 0) {
+        logger.info("Recreating browser page to prevent memory leaks and crashes...");
+        try {
+          await page.close().catch(() => {});
+        } catch (e) {}
+        page = await browserService.newPage();
+        if (searchService && "hasSetLocation" in searchService) {
+          (searchService as any).hasSetLocation = false;
+        }
+      }
+
+      // Close all extra pages/tabs in the context to save memory
+      try {
+        const pages = page.context().pages();
+        for (const p of pages) {
+          if (p !== page) {
+            await p.close().catch(() => {});
+          }
+        }
+      } catch (e) {
+        logger.warn(`Failed to clean up extra pages: ${(e as Error).message}`);
+      }
 
       const product = pendingProducts[i];
       const progress = `[${i + 1}/${pendingProducts.length}]`;
