@@ -564,6 +564,25 @@
                 </div>
                 <div id="validateProgressLabel" style="text-align: right; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.5rem;">0 / 0</div>
 
+                <!-- Download buttons -->
+                <div id="validateDownloadBar" style="display: none; margin-bottom: 1.5rem;">
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                        <span style="font-size: 0.85rem; color: var(--text-muted); margin-right: 0.25rem;">📥 Download:</span>
+                        <button onclick="downloadValidateResults('all')" class="btn-download" style="background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15)); color: #a78bfa; border: 1px solid rgba(139,92,246,0.25);">
+                            📋 Semua Hasil
+                        </button>
+                        <button onclick="downloadValidateResults('valid')" class="btn-download" style="background: rgba(16,185,129,0.1); color: var(--success); border: 1px solid rgba(16,185,129,0.2);">
+                            ✅ Valid Only
+                        </button>
+                        <button onclick="downloadValidateResults('mismatch')" class="btn-download" style="background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2);">
+                            ❌ Mismatch Only
+                        </button>
+                        <button onclick="downloadValidateResults('error')" class="btn-download" style="background: rgba(245,158,11,0.1); color: #f59e0b; border: 1px solid rgba(245,158,11,0.2);">
+                            ⚠️ Error Only
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Filter buttons -->
                 <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
                     <button onclick="filterResults('all')"    class="btn-download" id="vFilterAll"      style="background: rgba(59,130,246,0.15); color: var(--accent);">Semua</button>
@@ -1404,6 +1423,7 @@
             if (data.success) {
                 vStopBtn.style.display = 'block';
                 vResultsCard.style.display = 'block';
+                document.getElementById('validateDownloadBar').style.display = 'none';
                 validateAllResults = [];
                 vStatusMsg.textContent = `🔄 Memvalidasi ${data.total} baris dengan ${data.concurrency} tab bersamaan...`;
                 vStatusMsg.style.color = 'var(--accent)';
@@ -1453,6 +1473,8 @@
                     : `🛑 Dihentikan. ${data.checked}/${data.total} diperiksa.`;
                 vStatusMsg.textContent = msg;
                 vStatusMsg.style.color = data.state === 'done' ? 'var(--success)' : '#f59e0b';
+                // Show download bar when validation is complete
+                document.getElementById('validateDownloadBar').style.display = 'block';
             }
         } catch (e) {
             console.error('Poll error', e);
@@ -1527,6 +1549,16 @@
     window.filterResults = function(filter) {
         validateCurrentFilter = filter;
         renderValidateResults();
+    };
+
+    window.downloadValidateResults = function(filter) {
+        const url = `/api/validate/download?filter=${encodeURIComponent(filter)}`;
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = '';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     function escapeHtml(str) {

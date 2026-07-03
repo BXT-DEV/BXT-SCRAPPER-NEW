@@ -1,0 +1,5 @@
+SKU;Product Name;link;spec;amazon_price;amazon_title;match_confidence;status;error_message;condition;link_round1
+ip11ProMax512GBSpG-ASN-AU;Apple iPhone 11 PRO MAX (512GB, Space Grey) - Pristine;;;;;0;error;"page.goto: net::ERR_ABORTED at https://reebelo.com.au/
+Call log:
+[2m  - navigating to ""https://reebelo.com.au/"", waiting until ""domcontentloaded""[22m
+";;

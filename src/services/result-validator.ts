@@ -160,11 +160,44 @@ async function fetchLiveTitle(page: Page, url: string): Promise<string> {
   // Small wait for JS-rendered titles
   await page.waitForTimeout(2000);
 
-  const liveTitle = await page.evaluate((): string => {
+  const liveTitle = await page.evaluate((urlStr): string => {
+    const u = urlStr.toLowerCase();
+    
+    // 1. Reebelo specific title extraction (includes active variant aria-label or subtitle)
+    if (u.includes("reebelo.com")) {
+      const pdpTitleEl = document.querySelector("#e2e-pdp-title [aria-label]");
+      if (pdpTitleEl) {
+        const label = pdpTitleEl.getAttribute("aria-label");
+        if (label?.trim()) return label.trim();
+      }
+      const titleContainer = document.querySelector("#e2e-pdp-title");
+      if (titleContainer && titleContainer.textContent?.trim()) {
+        return titleContainer.textContent.trim().replace(/\s+/g, " ");
+      }
+    }
+
+    // 2. Backmarket specific title extraction
+    if (u.includes("backmarket.com")) {
+      const h1 = document.querySelector("h1");
+      if (h1 && h1.textContent?.trim()) {
+        let title = h1.textContent.trim();
+        // Find active variant elements
+        const activeOptions = Array.from(document.querySelectorAll('[aria-selected="true"], .active, [class*="active"]'));
+        const optionTexts = activeOptions
+          .map(el => el.textContent?.trim())
+          .filter((txt): txt is string => !!txt && txt.length < 20 && !txt.includes("$") && !txt.includes("A$"));
+        if (optionTexts.length > 0) {
+          title += " - " + optionTexts.join(" - ");
+        }
+        return title;
+      }
+    }
+
+    // 3. Fallback: H1 or document title
     const h1 = document.querySelector("h1");
     if (h1 && h1.textContent?.trim()) return h1.textContent.trim();
     return document.title.trim();
-  });
+  }, url);
 
   return liveTitle;
 }

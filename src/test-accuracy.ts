@@ -36,6 +36,11 @@ const searchQueryTestCases = [
     expectInSmart: ["Apple", "iMac", "2021", "2TB"],
     expectNotInSmart: ["Blue", "Excellent"],
   },
+  {
+    input: "Apple iPhone SE 2022 (256GB, Red) AU - Excellent",
+    expectInSmart: ["Apple", "iPhone", "SE", "2022", "256GB"],
+    expectNotInSmart: ["Red", "AU", "Excellent"],
+  },
 ];
 
 console.log("═══════════════════════════════════════════");

@@ -55,7 +55,7 @@ async function saveDebugSnapshot(page: Page, label: string): Promise<void> {
 export class AmazonSearchService {
   private readonly amazonDomain: string;
   private readonly maxResults: number;
-  private isInitialized = false;
+  public hasSetLocation = false;
 
   constructor(amazonDomain: string, maxResults: number) {
     this.amazonDomain = amazonDomain;
@@ -74,7 +74,7 @@ export class AmazonSearchService {
       const currentUrl = page.url();
       const isAlreadyOnAmazon = currentUrl.includes(this.amazonDomain);
 
-      if (!this.isInitialized || !isAlreadyOnAmazon) {
+      if (!this.hasSetLocation || !isAlreadyOnAmazon) {
         logger.info(`Visiting Amazon via initial search link...`);
         // Using a search link to establish session
         const organicAdUrl = "https://www.amazon.com.au/s?k=iphone&crid=1DMGKR2XYUHGW&sprefix=%2Caps%2C286&ref=nb_sb_ss_recent_1_0_recent";
@@ -99,7 +99,7 @@ export class AmazonSearchService {
 
         // Set delivery postcode to 3175 Dandenong
         await this.setDeliveryPostcode(page);
-        this.isInitialized = true;
+        this.hasSetLocation = true;
       }
 
       // Check for CAPTCHA again before searching
@@ -440,8 +440,12 @@ export class AmazonSearchService {
 
   /**
    * Helper to click a variant swatch by its text.
+   * Returns:
+   * - "already_selected" if already selected
+   * - "clicked" if click was successful
+   * - "not_found" if not found or failed
    */
-  private async clickVariantByText(page: Page, dimension: string, texts: string[]): Promise<boolean> {
+  private async clickVariantByText(page: Page, dimension: string, texts: string[]): Promise<"clicked" | "already_selected" | "not_found"> {
     try {
       const argsObj = { dim: dimension, targetTexts: texts };
       const evalFnStr = `
@@ -460,7 +464,7 @@ export class AmazonSearchService {
             container = document.querySelector('#twister-plus-inline-twister, #inline-twister-container, #twister');
           }
           
-          if (!container) return false;
+          if (!container) return "not_found";
 
           // Find all swatch-like elements inside this container
           const elements = Array.from(container.querySelectorAll('li, button, a, [role="button"], .a-declarative'));
@@ -502,28 +506,28 @@ export class AmazonSearchService {
                                  parentClassList.includes('selected') || parentClassList.includes('active') || parentClassList.includes('swatchselect');
               
               if (isSelected) {
-                return true; // Already selected
+                return "already_selected";
               }
 
               try {
                 el.click();
-                return true;
+                return "clicked";
               } catch (e) {
                 const clickable = el.querySelector('a, button, input');
                 if (clickable) {
                   clickable.click();
-                  return true;
+                  return "clicked";
                 }
               }
             }
           }
-          return false;
+          return "not_found";
         })()
       `;
-      return await page.evaluate(evalFnStr) as boolean;
+      return await page.evaluate(evalFnStr) as "clicked" | "already_selected" | "not_found";
     } catch (e) {
       logger.error(`Error in clickVariantByText: ${(e as Error).message}`);
-      return false;
+      return "not_found";
     }
   }
 
@@ -549,30 +553,34 @@ export class AmazonSearchService {
         }
       });
     }`).catch(() => {});
-    await randomDelay(1500, 2000);
+    await randomDelay(500, 1000);
 
     // Try selecting storage variant
     const specs = extractSpecs(product.productName);
     if (specs.storage.length > 0) {
       logger.info(`Amazon variant selection: attempting to select storage: ${specs.storage.join(", ")}`);
-      const clicked = await this.clickVariantByText(page, "size_name", specs.storage);
-      if (clicked) {
-        logger.info("Storage variant clicked/verified.");
-        await randomDelay(2000, 3000);
+      const status = await this.clickVariantByText(page, "size_name", specs.storage);
+      if (status === "clicked") {
+        logger.info("Storage variant clicked.");
+        await randomDelay(1000, 1500);
+      } else if (status === "already_selected") {
+        logger.info("Storage variant already selected.");
       } else {
-        logger.warn("Storage variant not found / not clicked.");
+        logger.warn("Storage variant not found.");
       }
     }
 
     // Try selecting color variant
     if (specs.colors.length > 0) {
       logger.info(`Amazon variant selection: attempting to select color: ${specs.colors.join(", ")}`);
-      const clicked = await this.clickVariantByText(page, "color_name", specs.colors);
-      if (clicked) {
-        logger.info("Color variant clicked/verified.");
-        await randomDelay(2000, 3000);
+      const status = await this.clickVariantByText(page, "color_name", specs.colors);
+      if (status === "clicked") {
+        logger.info("Color variant clicked.");
+        await randomDelay(1000, 1500);
+      } else if (status === "already_selected") {
+        logger.info("Color variant already selected.");
       } else {
-        logger.warn("Color variant not found / not clicked.");
+        logger.warn("Color variant not found.");
       }
     }
 
@@ -580,10 +588,12 @@ export class AmazonSearchService {
     const isRefurbished = product.productName.toLowerCase().includes("refurbished") || product.productName.toLowerCase().includes("renewed");
     if (isRefurbished) {
       logger.info("Amazon variant selection: product is Refurbished/Renewed. Attempting to select Renewed variant...");
-      const clicked = await this.clickVariantByText(page, "style_name", ["Renewed", "Refurbished"]);
-      if (clicked) {
-        logger.info("Renewed variant clicked/verified.");
-        await randomDelay(2000, 3000);
+      const status = await this.clickVariantByText(page, "style_name", ["Renewed", "Refurbished"]);
+      if (status === "clicked") {
+        logger.info("Renewed variant clicked.");
+        await randomDelay(1000, 1500);
+      } else if (status === "already_selected") {
+        logger.info("Renewed variant already selected.");
       }
     }
     
@@ -754,6 +764,6 @@ export class AmazonSearchService {
       }
     }
 
-    return { price, cleanUrl };
+    return { price, cleanUrl: page.url() };
   }
 }

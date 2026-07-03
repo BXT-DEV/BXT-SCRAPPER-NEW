@@ -12,6 +12,7 @@ import {
   ResultValidatorService,
   parseXlsxRows,
 } from "./services/result-validator.js";
+import * as xlsx from "xlsx";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -363,6 +364,66 @@ function handleValidateStop(res: http.ServerResponse) {
   jsonResponse(res, { success: true, message: "Stop signal sent" });
 }
 
+async function handleValidateDownload(
+  res: http.ServerResponse,
+  query: string,
+) {
+  const progress = validator.getProgress();
+  if (progress.results.length === 0) {
+    res.writeHead(404);
+    res.end("No validation results available");
+    return;
+  }
+
+  // Determine filter from query string (?filter=valid|mismatch|error)
+  const params = new URLSearchParams(query);
+  const filter = (params.get("filter") || "all").toLowerCase();
+  const filteredResults =
+    filter === "all"
+      ? progress.results
+      : progress.results.filter(
+          (r) => r.status.toLowerCase() === filter,
+        );
+
+  if (filteredResults.length === 0) {
+    res.writeHead(404);
+    res.end("No results match the selected filter");
+    return;
+  }
+
+  // Build sheet data
+  const sheetData = filteredResults.map((r) => ({
+    Row: r.rowIndex,
+    Status: r.status,
+    "Source Name": r.sourceName,
+    "Matched Title": r.matchedTitle,
+    "Live Title": r.liveTitle,
+    Reason: r.reason,
+    Spec: r.spec,
+    Condition: r.condition,
+    URL: r.url,
+    Store: r.store,
+    "Checked At": r.checkedAt,
+  }));
+
+  const workbook = xlsx.utils.book_new();
+  const worksheet = xlsx.utils.json_to_sheet(sheetData);
+  xlsx.utils.book_append_sheet(workbook, worksheet, "Validation Results");
+
+  const buffer = xlsx.write(workbook, { type: "buffer", bookType: "xlsx" });
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const safeFilter = filter === "all" ? "" : `_${filter}`;
+  const downloadName = `validation_results${safeFilter}_${timestamp}.xlsx`;
+
+  res.writeHead(200, {
+    "Content-Type":
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "Content-Disposition": `attachment; filename="${downloadName}"`,
+    "Content-Length": buffer.length,
+  });
+  res.end(buffer);
+}
+
 // ── Server ───────────────────────────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
@@ -518,6 +579,10 @@ const server = http.createServer(async (req, res) => {
       return handleValidateProgress(res);
     if (method === "POST" && url === "/api/validate/stop")
       return handleValidateStop(res);
+    if (method === "GET" && url === "/api/validate/download") {
+      const queryStr = fullUrl.includes("?") ? fullUrl.split("?")[1] : "";
+      return await handleValidateDownload(res, queryStr);
+    }
 
     res.writeHead(404);
     res.end();

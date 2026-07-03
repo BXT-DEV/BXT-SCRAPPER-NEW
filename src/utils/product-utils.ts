@@ -86,8 +86,8 @@ export function getSmartSearchQuery(name: string): string {
     smart = smart.replace(new RegExp(`\\s*\\b${color}\\b`, "gi"), "");
   }
 
-  // 9. Remove "Australian Stock" / "AU Stock"
-  smart = smart.replace(/\b(Australian Stock|AU Stock)\b/gi, "");
+  // 9. Remove "Australian Stock" / "AU Stock" / "AU"
+  smart = smart.replace(/\b(Australian Stock|AU Stock|AU)\b/gi, "");
 
   // 10. Remove condition labels
   smart = smart.replace(/\b(Excellent|Pristine|Good|Very Good|Refurbished|Renewed)\b/gi, "");
@@ -166,7 +166,7 @@ export function getBroadSearchQuery(name: string): string {
   }
 
   // 7. Remove condition/stock/filler labels
-  broad = broad.replace(/\b(Australian Stock|AU Stock)\b/gi, "");
+  broad = broad.replace(/\b(Australian Stock|AU Stock|AU)\b/gi, "");
   broad = broad.replace(/\b(Excellent|Pristine|Good|Very Good|Refurbished|Renewed)\b/gi, "");
   broad = broad.replace(/\b(Digital Cameras|Digital SLR Camera|Mirrorless Camera|With Adapter|Kit Box)\b/gi, "");
 

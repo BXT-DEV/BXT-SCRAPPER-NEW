@@ -1,0 +1,15 @@
+SKU;Product Name;link;spec;amazon_price;amazon_title;match_confidence;status;error_message;condition;link_round1
+ip11128GBYellow-EXD-AU;Apple iPhone 11 (128GB, Yellow) - Excellent;;;;;0;no_match;;;
+ip11256GBBlack-EXD-AU;Apple iPhone 11 (256GB, Black) - Excellent;;;;;0;no_match;;;
+ip11256GBPurple-EXD-AU;Apple iPhone 11 (256GB, Purple) - Excellent;;;;;0;no_match;;;
+ip11256GBYellow-EXD-AU;Apple iPhone 11 (256GB, Yellow) - Excellent;;;;;0;no_match;;;
+ip1164GBGreen-EXD-AU;Apple iPhone 11 (64GB, Green) - Excellent;https://reebelo.com.au/collections/apple-iphone-11?skuId=sku-mnowdlw9SpKDjrW0PQ1uAhz;64GB, 64 GB | Green;297.22;iPhone 11 - 64GB - Green;1;matched;;Very Good;https://reebelo.com.au/collections/apple-iphone-11?skuId=sku-mnowdlw9SpKDjrW0PQ1uAhz
+ip1164GBPurple-EXD-AU;Apple iPhone 11 (64GB, Purple) - Excellent;https://reebelo.com.au/collections/apple-iphone-11?skuId=sku-mnqqoo6tkmEBWnfP7HERtaL;64GB, 64 GB | Purple;261.99;iPhone 11 - 64GB - Purple;1;matched;;Very Good;https://reebelo.com.au/collections/apple-iphone-11?skuId=sku-mnqqoo6tkmEBWnfP7HERtaL
+ip11ProGB256Gold-RD-VR-EXD-AU;Apple iPhone 11 PRO (256GB, Gold) - Excellent;;;;;0;no_match;;;
+ip11ProGB256Slvr-RD-VR-EXD-AU;Apple iPhone 11 PRO (256GB, Silver) - Excellent;;;;;0;no_match;;;
+ip11ProGB512Green-RD-VR-EXD-AU;Apple iPhone 11 PRO (512GB, Green) - Excellent;;;;;0;no_match;;;
+ip11ProGB512SpG-RD-VR-EXD-AU;Apple iPhone 11 PRO (512GB, Grey) - Excellent;;;;;0;no_match;;;
+ip11ProGB512Silver-RD-VR-EXD-AU;Apple iPhone 11 PRO (512GB, Silver) - Excellent;;;;;0;no_match;;;
+ip11Pro64GBGold-RD-VR-EXD-AU;Apple iPhone 11 PRO (64GB, Gold) - Excellent;https://reebelo.com.au/collections/apple-iphone-11-pro?skuId=sku-mjwy6w5lrkl6CmfoJqBO1jN;64GB, 64 GB | Gold;340.26;iPhone 11 Pro - 64GB - Gold;1;matched;;Very Good;https://reebelo.com.au/collections/apple-iphone-11-pro?skuId=sku-mjwy6w5lrkl6CmfoJqBO1jN
+ip11Pro64GBGreen-RD-VR-EXD-AU;Apple iPhone 11 PRO (64GB, Green) - Excellent;https://reebelo.com.au/collections/apple-iphone-11-pro?skuId=sku-mjwy73groPEwTeeIbhdd1Cy;64GB, 64 GB | Midnight Green;319.99;iPhone 11 Pro - 64GB - Midnight Green;1;matched;;Very Good;https://reebelo.com.au/collections/apple-iphone-11-pro?skuId=sku-mjwy73groPEwTeeIbhdd1Cy
+ip11ProMax256GBGold-RD-VR-EXD-AU;Apple iPhone 11 PRO MAX (256GB, Gold) - Excellent;;;;;0;no_match;;;

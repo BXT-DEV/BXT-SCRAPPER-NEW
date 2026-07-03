@@ -229,6 +229,10 @@ export class BrowserService {
       "--lang=en-AU",
     ];
 
+    if (process.env.HEADLESS === "true") {
+      args.push("--headless=new");
+    }
+
     // Proxy support
     if (this.proxyUrl) {
       args.push(`--proxy-server=${this.proxyUrl}`);

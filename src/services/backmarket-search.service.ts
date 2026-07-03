@@ -7,7 +7,7 @@ import type { Page } from "playwright";
 import type { AmazonSearchResult, BecexProduct } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { randomDelay } from "../utils/delay.js";
-import { extractSpecs } from "../utils/product-utils.js";
+import { extractSpecs, getBroadSearchQuery } from "../utils/product-utils.js";
 import {
   humanType,
   humanClick,
@@ -571,6 +571,142 @@ export class BackmarketSearchService {
     }
   }
 
+  async matchDirectly(
+    page: Page,
+    product: BecexProduct,
+    searchResults: AmazonSearchResult[],
+  ): Promise<{
+    url: string;
+    title: string;
+    price: number | null;
+    selectedCondition?: string;
+  } | null> {
+    // Find the first valid product page that matches the model name (without specs)
+    const broadModelName = getBroadSearchQuery(product.productName);
+    const validResult = searchResults.find((r) => {
+      const isProductPage = r.url.includes("/p/");
+      const matchesModel = this.isModelMatch(broadModelName, r.title);
+      logger.info(`Candidate: "${r.title}" | URL: ${r.url} | isProductPage: ${isProductPage} | matchesModel: ${matchesModel}`);
+      if (!isProductPage) return false;
+      return matchesModel;
+    });
+
+    if (!validResult) {
+      logger.warn(
+        `No valid matching Backmarket product page found for ${product.productName} in ${searchResults.length} results.`,
+      );
+      return null;
+    }
+
+    logger.info(`Navigating to Backmarket product page: ${validResult.title}`);
+    await page.goto(validResult.url, {
+      waitUntil: "domcontentloaded",
+      timeout: 30000,
+    });
+    await randomDelay(2000, 3000);
+
+    // Select all variants using the existing full flow
+    try {
+      const { price, cleanUrl, selectedCondition } =
+        await this.selectVariantsAndGetPrice(page, product, validResult.url);
+
+      // Read the final page title after variant selection
+      const pageTitle =
+        (await page.evaluate(() => {
+          const h1 = document.querySelector("h1");
+          const subtitle = document.querySelector(
+            'h1 + p, h1 + div, [class*="subtitle"]',
+          );
+          return [h1?.textContent?.trim(), subtitle?.textContent?.trim()]
+            .filter(Boolean)
+            .join(" - ");
+        })) || validResult.title;
+
+      return { url: cleanUrl, title: pageTitle, price, selectedCondition };
+    } catch (error) {
+      const msg = (error as Error).message;
+      if (msg.startsWith("REQUIRED_VARIANT_NOT_FOUND")) {
+        logger.info(`  ✗ Variant not available: ${msg}`);
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  private isModelMatch(query: string, candidateTitle: string): boolean {
+    const cleanQuery = query
+      .toLowerCase()
+      .replace(/\bplus\b/g, "+")
+      .replace(/[^a-z0-9+ ]/g, "");
+    const cleanCandidate = candidateTitle
+      .toLowerCase()
+      .replace(/\bplus\b/g, "+")
+      .replace(/[^a-z0-9+ ]/g, "");
+
+    const queryWords = cleanQuery.split(/\s+/).filter(Boolean);
+    const candidateNormalized = cleanCandidate.replace(/\s+/g, "");
+
+    // Extract model identifiers (words containing digits)
+    const modelIdentifiers = queryWords.filter((word) => /\d/.test(word));
+
+    // Core name words (excluding brands and generic words)
+    const ignoreWords = new Set([
+      "samsung",
+      "apple",
+      "google",
+      "oppo",
+      "sony",
+      "nintendo",
+      "canon",
+      "nikon",
+      "galaxy",
+      "iphone",
+      "pixel",
+      "ipad",
+      "watch",
+      "phone",
+      "camera",
+      "lens",
+      "console",
+      "refurbished",
+      "excellent",
+      "pristine",
+      "good",
+      "very",
+    ]);
+
+    const coreWords = queryWords.filter((word) => {
+      if (word === "+") return true;
+      if (word.length <= 2) return false;
+      if (ignoreWords.has(word)) return false;
+      if (/\d/.test(word)) return false; // Already checked in modelIdentifiers
+      return true;
+    });
+
+    // Check model identifiers (e.g., "s24", "5")
+    for (const id of modelIdentifiers) {
+      if (!candidateNormalized.includes(id)) {
+        return false;
+      }
+    }
+
+    // Check core words (e.g., "ultra", "fold")
+    for (const word of coreWords) {
+      if (!candidateNormalized.includes(word)) {
+        return false;
+      }
+    }
+
+    // Strict model modifier check: "plus" / "+"
+    const queryHasPlus = cleanQuery.includes("+");
+    const candidateHasPlus = cleanCandidate.includes("+");
+    if (queryHasPlus !== candidateHasPlus) {
+      return false;
+    }
+
+    return true;
+  }
+
   async selectVariantsAndGetPrice(
     page: Page,
     product: BecexProduct,
@@ -621,45 +757,7 @@ export class BackmarketSearchService {
     await this.dismissCookieConsent(page);
 
     // Dismiss location modal if it is visible on the product page itself
-    const hasModalOnProductPage = await page.evaluate(() => {
-      const allText = document.body.innerText;
-      const elements = Array.from(document.querySelectorAll("button, span, a"));
-      const hasAustralia = elements.some(
-        (el) => el.textContent?.trim() === "Australia",
-      );
-
-      return (
-        allText.includes("Choose location") ||
-        allText.includes("Choose country") ||
-        hasAustralia
-      );
-    });
-    if (hasModalOnProductPage) {
-      logger.info(
-        "Location selector modal visible on product page. Dismissing...",
-      );
-      await page.evaluate(() => {
-        const btns = Array.from(document.querySelectorAll("button"));
-        const closeBtn = btns.find((b) => {
-          const txt = b.textContent?.trim() || "";
-          return (
-            txt === "✕" || txt.includes("✕") || b.className.includes("close")
-          );
-        });
-        if (closeBtn) {
-          closeBtn.click();
-        } else {
-          const elements = Array.from(
-            document.querySelectorAll("button, span, a"),
-          );
-          const ausEl = elements.find(
-            (s) => s.textContent?.trim() === "Australia",
-          );
-          if (ausEl) (ausEl as HTMLElement).click();
-        }
-      });
-      await randomDelay(2000, 3000);
-    }
+    await this.dismissLocationModalQuietly(page);
 
     const rulesConfig = loadRules();
     const catRules = rulesConfig["MAPPING REFURBISHED"];
@@ -763,22 +861,7 @@ export class BackmarketSearchService {
       }
     }
 
-    await randomDelay(1000, 2000);
-
-    // Ensure the URL reflects the selected variant (Backmarket adds query params after picker interaction)
-    try {
-      await page.waitForFunction(
-        () => {
-          const href = window.location.href;
-          return (
-            href.includes("variantClicked") && href.includes("pickerClicked")
-          );
-        },
-        { timeout: 10000 },
-      );
-    } catch (_) {
-      // If the URL does not change within the timeout, continue with whatever URL is present.
-    }
+    await randomDelay(500, 1000);
 
     // Log final URL after variant selection
     logger.info(`Final product URL after variant selection: ${page.url()}`);
@@ -802,13 +885,53 @@ export class BackmarketSearchService {
     return { price, cleanUrl: page.url(), selectedCondition };
   }
 
+  private async dismissLocationModalQuietly(page: Page): Promise<void> {
+    try {
+      const hasModalOnProductPage = await page.evaluate(() => {
+        const allText = document.body.innerText;
+        const elements = Array.from(document.querySelectorAll("button, span, a"));
+        const hasAustralia = elements.some(
+          (el) => el.textContent?.trim() === "Australia",
+        );
+        return (
+          allText.includes("Choose location") ||
+          allText.includes("Choose country") ||
+          hasAustralia
+        );
+      });
+      if (hasModalOnProductPage) {
+        logger.info("Dismissing location selector modal...");
+        await page.evaluate(() => {
+          const btns = Array.from(document.querySelectorAll("button"));
+          const closeBtn = btns.find((b) => {
+            const txt = b.textContent?.trim() || "";
+            return (
+              txt === "✕" || txt.includes("✕") || b.className.includes("close")
+            );
+          });
+          if (closeBtn) {
+            closeBtn.click();
+          } else {
+            const elements = Array.from(
+              document.querySelectorAll("button, span, a"),
+            );
+            const ausEl = elements.find(
+              (s) => s.textContent?.trim() === "Australia",
+            );
+            if (ausEl) (ausEl as HTMLElement).click();
+          }
+        });
+        await randomDelay(1000, 1500);
+      }
+    } catch (_) {}
+  }
+
   private async clickVariantByText(
     page: Page,
     texts: string[],
   ): Promise<boolean> {
     try {
       const urlBefore = page.url();
-      const pathBefore = new URL(urlBefore).pathname;
 
       for (const text of texts) {
         // Try multiple ways to find the button/label
@@ -840,14 +963,18 @@ export class BackmarketSearchService {
           try {
             if (await selector.first().isVisible()) {
               await selector.first().click({ force: true });
-              await randomDelay(1000, 2000);
-              const pathAfter = new URL(page.url()).pathname;
-              if (pathBefore !== pathAfter) {
-                logger.warn(
-                  `Clicking variant navigated from ${urlBefore} to ${page.url()}. Reverting navigation.`,
-                );
-                await page.goto(urlBefore, { waitUntil: "domcontentloaded" });
-                continue;
+              await randomDelay(500, 1000);
+              
+              const urlAfter = page.url();
+              if (urlBefore !== urlAfter) {
+                logger.info(`Clicking variant navigated to: ${urlAfter}`);
+                if (!urlAfter.includes(this.domain) || !urlAfter.includes("/p/")) {
+                  logger.warn(`Clicking variant navigated to unrelated page: ${urlAfter}. Reverting...`);
+                  await page.goto(urlBefore, { waitUntil: "domcontentloaded" }).catch(() => {});
+                  continue;
+                }
+                await page.waitForLoadState("domcontentloaded", { timeout: 10000 }).catch(() => {});
+                await this.dismissLocationModalQuietly(page);
               }
               return true;
             }
@@ -860,21 +987,25 @@ export class BackmarketSearchService {
       // Fallback: search for any element that might be a variant picker
       const buttons = await page.$$('button, label, [role="button"], span');
       for (const btn of buttons) {
-        const text = await btn.textContent();
+        const textContentVal = await btn.textContent();
         if (
-          text &&
-          texts.some((t) => text.trim().toLowerCase() === t.toLowerCase())
+          textContentVal &&
+          texts.some((t) => textContentVal.trim().toLowerCase() === t.toLowerCase())
         ) {
           if (await btn.isVisible()) {
             await btn.click({ force: true }).catch(() => {});
-            await randomDelay(1000, 2000);
-            const pathAfter = new URL(page.url()).pathname;
-            if (pathBefore !== pathAfter) {
-              logger.warn(
-                `Clicking fallback variant navigated from ${urlBefore} to ${page.url()}. Reverting navigation.`,
-              );
-              await page.goto(urlBefore, { waitUntil: "domcontentloaded" });
-              continue;
+            await randomDelay(500, 1000);
+            
+            const urlAfter = page.url();
+            if (urlBefore !== urlAfter) {
+              logger.info(`Clicking fallback variant navigated to: ${urlAfter}`);
+              if (!urlAfter.includes(this.domain) || !urlAfter.includes("/p/")) {
+                logger.warn(`Clicking fallback variant navigated to unrelated page: ${urlAfter}. Reverting...`);
+                await page.goto(urlBefore, { waitUntil: "domcontentloaded" }).catch(() => {});
+                continue;
+              }
+              await page.waitForLoadState("domcontentloaded", { timeout: 10000 }).catch(() => {});
+              await this.dismissLocationModalQuietly(page);
             }
             return true;
           }

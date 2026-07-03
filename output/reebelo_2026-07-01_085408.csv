@@ -1,0 +1,41 @@
+SKU;Product Name;link;spec;amazon_price;amazon_title;match_confidence;status;error_message;condition;link_round1
+ip11128GBYellow-EXD-AU;Apple iPhone 11 (128GB, Yellow) - Excellent;;;;;0;no_match;;;
+ip11256GBBlack-EXD-AU;Apple iPhone 11 (256GB, Black) - Excellent;;;;;0;no_match;;;
+ip11256GBPurple-EXD-AU;Apple iPhone 11 (256GB, Purple) - Excellent;;;;;0;no_match;;;
+ip11256GBYellow-EXD-AU;Apple iPhone 11 (256GB, Yellow) - Excellent;;;;;0;no_match;;;
+ip1164GBGreen-EXD-AU;Apple iPhone 11 (64GB, Green) - Excellent;https://reebelo.com.au/collections/apple-iphone-11?skuId=sku-mnowdlw9SpKDjrW0PQ1uAhz;64GB, 64 GB | Green;297.22;iPhone 11 - 64GB - Green;1;matched;;Very Good;https://reebelo.com.au/collections/apple-iphone-11?skuId=sku-mnowdlw9SpKDjrW0PQ1uAhz
+ip1164GBPurple-EXD-AU;Apple iPhone 11 (64GB, Purple) - Excellent;https://reebelo.com.au/collections/apple-iphone-11?skuId=sku-mnqqoo6tkmEBWnfP7HERtaL;64GB, 64 GB | Purple;287.99;iPhone 11 - 64GB - Purple;1;matched;;Very Good;https://reebelo.com.au/collections/apple-iphone-11?skuId=sku-mnqqoo6tkmEBWnfP7HERtaL
+ip11ProGB256Gold-RD-VR-EXD-AU;Apple iPhone 11 PRO (256GB, Gold) - Excellent;;;;;0;no_match;;;
+ip11ProGB256Slvr-RD-VR-EXD-AU;Apple iPhone 11 PRO (256GB, Silver) - Excellent;;;;;0;no_match;;;
+ip11ProGB512Green-RD-VR-EXD-AU;Apple iPhone 11 PRO (512GB, Green) - Excellent;;;;;0;no_match;;;
+ip11ProGB512SpG-RD-VR-EXD-AU;Apple iPhone 11 PRO (512GB, Grey) - Excellent;;;;;0;no_match;;;
+ip11ProGB512Silver-RD-VR-EXD-AU;Apple iPhone 11 PRO (512GB, Silver) - Excellent;;;;;0;no_match;;;
+ip11Pro64GBGold-RD-VR-EXD-AU;Apple iPhone 11 PRO (64GB, Gold) - Excellent;https://reebelo.com.au/collections/apple-iphone-11-pro?skuId=sku-mjwy6w5lrkl6CmfoJqBO1jN;64GB, 64 GB | Gold;340.26;iPhone 11 Pro - 64GB - Gold;1;matched;;Very Good;https://reebelo.com.au/collections/apple-iphone-11-pro?skuId=sku-mjwy6w5lrkl6CmfoJqBO1jN
+ip11Pro64GBGreen-RD-VR-EXD-AU;Apple iPhone 11 PRO (64GB, Green) - Excellent;https://reebelo.com.au/collections/apple-iphone-11-pro?skuId=sku-mjwy73groPEwTeeIbhdd1Cy;64GB, 64 GB | Midnight Green;308.99;iPhone 11 Pro - 64GB - Midnight Green;1;matched;;Very Good;https://reebelo.com.au/collections/apple-iphone-11-pro?skuId=sku-mjwy73groPEwTeeIbhdd1Cy
+ip11ProMax256GBGold-RD-VR-EXD-AU;Apple iPhone 11 PRO MAX (256GB, Gold) - Excellent;;;;;0;no_match;;;
+ip11ProMax512GBGold-RD-VR-EXD-AU;Apple iPhone 11 PRO MAX (512GB, Gold) - Excellent;;;;;0;no_match;;;
+ip11ProMax512GBSilver-RD-VR-EXD-AU;Apple iPhone 11 PRO MAX (512GB, Silver) - Excellent;;;;;0;no_match;;;
+ip11ProMax64GBGreen-RD-VR-EXD-AU;Apple iPhone 11 PRO MAX (64GB, Green) - Excellent;;;;;0;no_match;;;
+ip11ProMax64GBSlvr-RD-VR-EXD-AU;Apple iPhone 11 PRO MAX (64GB, Silver) - Excellent;https://reebelo.com.au/collections/apple-iphone-11-pro-max?skuId=sku-mjwy8yllxUw8IxKYIcpwoug;64GB, 64 GB | Silver;374.99;iPhone 11 Pro Max - 64GB - Silver;1;matched;;Very Good;https://reebelo.com.au/collections/apple-iphone-11-pro-max?skuId=sku-mjwy8yllxUw8IxKYIcpwoug
+ip11ProMax64GBSpGre-RD-VR-EXD-AU;Apple iPhone 11 PRO MAX (64GB, Space Grey) - Excellent;https://reebelo.com.au/collections/apple-iphone-11-pro-max?skuId=sku-mnqyg58heQon2oI5Zxkm5xM;64GB, 64 GB | Space Grey;383.99;iPhone 11 Pro Max - 64GB - Space Grey;1;matched;;Very Good;https://reebelo.com.au/collections/apple-iphone-11-pro-max?skuId=sku-mnqyg58heQon2oI5Zxkm5xM
+ip11128GBWhite-ASN-AU;Apple iPhone 11 (128GB, White) - Pristine;;;;;0;no_match;;;
+Apliph12256GBPrp-RD-VR-EXD-AU;Apple iPhone 12 (256GB, Purple) - Excellent;;;;;0;no_match;;;
+ip11256GBPurple-VR-ASN-AU;Apple iPhone 11 (256GB, Purple) - Pristine;;;;;0;no_match;;;
+ip11256GBRed-VR-ASN-AU;Apple iPhone 11 (256GB, Red) - Pristine;;;;;0;no_match;;;
+ip11256GBWhite-ASN-AU;Apple iPhone 11 (256GB, White) - Pristine;;;;;0;no_match;;;
+iPhone11PRO256Green-ASN-AU;Apple iPhone 11 PRO (256GB, Green) - Pristine;;;;;0;no_match;;;
+iPhone11PRO256Silver-ASN-AU;Apple iPhone 11 PRO (256GB, Silver) - Pristine;;;;;0;no_match;;;
+iPhone11PRO256SpG-ASN-AU;Apple iPhone 11 PRO (256GB, Space Gray) - Pristine;;;;;0;no_match;;;
+iPhone11PRO512Gold-ASN-AU;Apple iPhone 11 PRO (512GB, Gold) - Pristine;;;;;0;no_match;;;
+iPh12Mini5G128GBDSPurp-RD-VR-EXD-AU;Apple iPhone 12 Mini (128GB, Purple) - Excellent;;;;;0;no_match;;;
+iPhone11PRO512Green-ASN-AU;Apple iPhone 11 PRO (512GB, Green) - Pristine;;;;;0;no_match;;;
+ip11128GBRedd-EXD-AU;Apple iPhone 11 (128GB, Red) - Excellent;;;;;0;no_match;;;
+iPhone11PRO512Slvr-ASN-AU;Apple iPhone 11 PRO (512GB, Silver) - Pristine;;;;;0;no_match;;;
+ip11128GBYlw-VR-ASN-AU;Apple iPhone 11 (128GB, Yellow) - Pristine;;;;;0;no_match;;;
+iPhone11PRO512SpG-ASN-AU;Apple iPhone 11 PRO (512GB, Space Grey) - Pristine;;;;;0;no_match;;;
+ip11256GBGreen-EXD-AU;Apple iPhone 11 (256GB, Green) - Excellent;;;;;0;no_match;;;
+ip11256GBGreen-VR-ASN-AU;Apple iPhone 11 (256GB, Green) - Pristine;;;;;0;no_match;;;
+ip11256GBWhte-EXD-AU;Apple iPhone 11 (256GB, White) - Excellent;;;;;0;no_match;;;
+iP11256GBYlw-VR-ASN-AU;Apple iPhone 11 (256GB, Yellow) - Pristine;;;;;0;no_match;;;
+ip11ProMax512GBGold-ASN-AU;Apple iPhone 11 PRO MAX (512GB, Gold) - Pristine;;;;;0;no_match;;;
+ip11ProMax512GBGreen-ASN-AU;Apple iPhone 11 PRO MAX (512GB, Green) - Pristine;;;;;0;no_match;;;

@@ -581,16 +581,19 @@ async function processSingleProduct(
     } else {
       price = await extractPriceFromProductPage(page);
       if (target === "amazon") {
-        cleanUrl = cleanAmazonUrl(bestCandidate.url);
+        cleanUrl = page.url();
       }
     }
 
-    const pageH1 =
-      (await page
-        .locator("h1")
-        .first()
-        .textContent()
-        .catch(() => "")) || "";
+    let pageH1 = "";
+    if (target === "amazon") {
+      pageH1 = (await page.locator("#productTitle").first().textContent().catch(() => "")) || "";
+      if (!pageH1.trim()) {
+        pageH1 = (await page.locator("h1").first().textContent().catch(() => "")) || "";
+      }
+    } else {
+      pageH1 = (await page.locator("h1").first().textContent().catch(() => "")) || "";
+    }
     const pageTitleText = await page.title().catch(() => "");
     const decodedUrl = decodeURIComponent(cleanUrl).replace(/[-_/]/g, " ");
     const combinedText = `${bestCandidate.title} ${pageH1} ${pageTitleText} ${decodedUrl}`;
@@ -698,17 +701,20 @@ async function processSingleProduct(
   } else {
     price = await extractPriceFromProductPage(page);
     if (target === "amazon") {
-      cleanUrl = cleanAmazonUrl(matchedResult.url);
+      cleanUrl = page.url();
     }
   }
 
   const searchTitle = matchedResult.title;
-  const pageH1 =
-    (await page
-      .locator("h1")
-      .first()
-      .textContent()
-      .catch(() => "")) || "";
+  let pageH1 = "";
+  if (target === "amazon") {
+    pageH1 = (await page.locator("#productTitle").first().textContent().catch(() => "")) || "";
+    if (!pageH1.trim()) {
+      pageH1 = (await page.locator("h1").first().textContent().catch(() => "")) || "";
+    }
+  } else {
+    pageH1 = (await page.locator("h1").first().textContent().catch(() => "")) || "";
+  }
   const pageTitleText = await page.title().catch(() => "");
   const decodedUrl = decodeURIComponent(cleanUrl).replace(/[-_/]/g, " ");
   const combinedText = `${searchTitle} ${pageH1} ${pageTitleText} ${decodedUrl}`;
@@ -900,13 +906,25 @@ async function main(): Promise<void> {
     for (let i = 0; i < pendingProducts.length; i++) {
       if (isShuttingDown) break;
 
-      // Recreate page every 40 products to prevent memory leaks and crashes
+      // Recreate browser every 40 products to prevent memory leaks and crashes
       if (i > 0 && i % 40 === 0) {
-        logger.info("Recreating browser page to prevent memory leaks and crashes...");
+        logger.info("Recreating browser to prevent memory leaks and crashes...");
         try {
-          await page.close().catch(() => {});
+          await browserService.shutdown().catch(() => {});
         } catch (e) {}
-        page = await browserService.newPage();
+        try {
+          await browserService.initialize();
+          page = await browserService.newPage();
+        } catch (e) {
+          logger.error(`Failed to re-initialize browser: ${(e as Error).message}`);
+          await sleep(5000);
+          try {
+            await browserService.initialize();
+            page = await browserService.newPage();
+          } catch (retryErr) {
+            logger.error(`Retry browser initialization failed: ${(retryErr as Error).message}`);
+          }
+        }
         if (searchService && "hasSetLocation" in searchService) {
           (searchService as any).hasSetLocation = false;
         }

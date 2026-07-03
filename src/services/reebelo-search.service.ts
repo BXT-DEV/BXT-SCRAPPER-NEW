@@ -338,12 +338,25 @@ export class ReebeloSearchService {
     }
 
     // 4. Color selection (must be before condition)
+    //    Color swatches are <a> navigation links — clicking triggers a page reload.
+    //    We must wait for navigation to settle before proceeding.
     if (specs.colors.length > 0) {
+      const urlBeforeColorClick = page.url();
       await this.clickReebeloVariant(page, "color", specs.colors, "Color");
+
+      // Wait for navigation triggered by color swatch <a> link
+      try {
+        await page.waitForURL((url) => url.toString() !== urlBeforeColorClick, {
+          timeout: 5000,
+        });
+      } catch {
+        // URL may not change if the target color was already selected
+        logger.info(`  ℹ Color click did not trigger URL change (may already be selected)`);
+      }
     }
 
-    // Wait for page to update after storage+color selection
-    await randomDelay(1500, 2500);
+    // Wait for page to stabilize after storage+color selection
+    await randomDelay(2000, 3000);
 
     // 3. Condition selection (now available after storage+color)
     // Mapping: Pristine -> 'Like New', Excellent -> 'Very Good'
@@ -477,67 +490,23 @@ export class ReebeloSearchService {
     await randomDelay(1000, 2000);
 
     // ── Post-selection validation: verify storage matches ──
-    // The subtitle/h1 may be stale (not updated after variant click).
-    // Instead, check the URL (which updates on variant change) and
-    // the actually-selected storage option in the picker.
     if (specs.storage.length > 0) {
-      const storageValidation = await page.evaluate(
-        ({ storageValues }) => {
-          // Method 1: Check the selected/active storage option in the picker
-          const storageSection = document.getElementById("e2e-pdp-storage");
-          if (storageSection) {
-            const links = Array.from(storageSection.querySelectorAll("a"));
-            for (const link of links) {
-              // Check for active state: aria-current, data-selected, or active CSS class
-              const isActive =
-                link.getAttribute("aria-current") === "true" ||
-                link.getAttribute("data-selected") === "true" ||
-                link.classList.contains("active") ||
-                link.classList.contains("selected") ||
-                // Reebelo uses a border/outline style for active options
-                getComputedStyle(link).borderColor !== "rgb(229, 229, 229)";
-              if (isActive) {
-                const linkText = link.textContent?.trim().toLowerCase() || "";
-                for (const sv of storageValues) {
-                  if (linkText.includes(sv.toLowerCase())) {
-                    return { matched: true, selectedText: linkText };
-                  }
-                }
-                return { matched: false, selectedText: linkText };
-              }
-            }
-          }
-
-          // Method 2: Check the full page subtitle / breadcrumb
-          const subtitle =
-            document.querySelector(
-              'h1 + p, h1 + div, [class*="subtitle"]',
-            )?.textContent?.trim() || "";
-          const h1 = document.querySelector("h1")?.textContent?.trim() || "";
-          const combined = `${h1} ${subtitle}`.toLowerCase();
-          for (const sv of storageValues) {
-            if (combined.includes(sv.toLowerCase())) {
-              return { matched: true, selectedText: combined };
-            }
-          }
-
-          return { matched: false, selectedText: combined };
-        },
-        { storageValues: specs.storage },
+      await this.validateSelectedVariant(
+        page,
+        "storage",
+        specs.storage,
+        "Storage",
       );
+    }
 
-      // Also check the URL as a final fallback — Reebelo URLs update on variant change
-      const currentUrl = decodeURIComponent(page.url()).toLowerCase();
-      const urlHasStorage = specs.storage.some((s) =>
-        currentUrl.includes(s.toLowerCase()),
+    // ── Post-selection validation: verify color matches ──
+    if (specs.colors.length > 0) {
+      await this.validateSelectedVariant(
+        page,
+        "color",
+        this.expandColorValues(specs.colors),
+        "Color",
       );
-
-      if (!storageValidation.matched && !urlHasStorage) {
-        throw new Error(
-          `REQUIRED_VARIANT_NOT_FOUND: Storage ${specs.storage.join("/")} ` +
-          `(page shows "${storageValidation.selectedText}" — requested storage not available)`,
-        );
-      }
     }
 
     const price = await page.evaluate(() => {
@@ -722,10 +691,12 @@ export class ReebeloSearchService {
             for (const link of links) {
               const text = link.textContent?.trim() || "";
               const ariaLabel = link.getAttribute("aria-label") || "";
+              const titleAttr = link.getAttribute("title") || "";
               if (
                 text.toLowerCase() === value.toLowerCase() ||
                 text.toLowerCase().includes(value.toLowerCase()) ||
-                ariaLabel.toLowerCase().includes(value.toLowerCase())
+                ariaLabel.toLowerCase().includes(value.toLowerCase()) ||
+                titleAttr.toLowerCase().includes(value.toLowerCase())
               ) {
                 (link as HTMLElement).click();
                 return true;
@@ -745,9 +716,11 @@ export class ReebeloSearchService {
     }
 
     // Strategy 3: Fallback to generic text-based matching (legacy approach)
-    // DISABLED for "condition" — page-wide text scan causes false positives
-    // when random elements contain condition keywords like "Excellent" or "Good".
-    if (variantType !== "condition") {
+    // DISABLED for "condition" and "color" — page-wide text scan causes false
+    // positives when random elements contain matching text (e.g., "Gold" in
+    // breadcrumbs, "Excellent" in feature descriptions).
+    const skipTextFallbackTypes = new Set(["condition", "color"]);
+    if (!skipTextFallbackTypes.has(variantType)) {
       const fallbackSuccess = await this.clickVariantByText(
         page,
         expandedValues,
@@ -758,7 +731,7 @@ export class ReebeloSearchService {
       }
     } else {
       logger.info(
-        `  ⚠ Skipping text fallback for condition (prevents false positives)`,
+        `  ⚠ Skipping text fallback for ${variantType} (prevents false positives)`,
       );
     }
 
@@ -806,6 +779,85 @@ export class ReebeloSearchService {
     } catch (e) {
       logger.warn(`Error while looking for variant: ${texts.join(" or ")}`);
       return false;
+    }
+  }
+
+  private expandColorValues(colors: string[]): string[] {
+    const expanded = [...colors];
+    for (const color of colors) {
+      const aliases = ReebeloSearchService.COLOR_ALIASES.get(color.toLowerCase());
+      if (aliases) {
+        expanded.push(...aliases);
+      }
+    }
+    return expanded;
+  }
+
+  private async validateSelectedVariant(
+    page: Page,
+    variantType: string,
+    targetValues: string[],
+    displayName: string,
+  ): Promise<void> {
+    const validation = await page.evaluate(
+      ({ type, values }) => {
+        // Method 1: Check active state of options in the specific variant picker container
+        const section = document.getElementById(`e2e-pdp-${type}`);
+        if (section) {
+          const links = Array.from(section.querySelectorAll("a"));
+          for (const link of links) {
+            const isActive =
+              link.getAttribute("aria-current") === "true" ||
+              link.getAttribute("data-selected") === "true" ||
+              link.classList.contains("active") ||
+              link.classList.contains("selected") ||
+              getComputedStyle(link).borderColor !== "rgb(229, 229, 229)";
+
+            if (isActive) {
+              const linkText = link.textContent?.trim().toLowerCase() || "";
+              const ariaLabel = link.getAttribute("aria-label")?.trim().toLowerCase() || "";
+              const titleAttr = link.getAttribute("title")?.trim().toLowerCase() || "";
+
+              for (const v of values) {
+                const valLower = v.toLowerCase();
+                if (
+                  linkText.includes(valLower) ||
+                  ariaLabel.includes(valLower) ||
+                  titleAttr.includes(valLower)
+                ) {
+                  return { matched: true, selectedText: linkText || ariaLabel || titleAttr };
+                }
+              }
+              return { matched: false, selectedText: linkText || ariaLabel || titleAttr };
+            }
+          }
+        }
+
+        // Method 2: Check URL or header subtitle combined text
+        const subtitle = document.querySelector('h1 + p, h1 + div, [class*="subtitle"]')?.textContent?.trim() || "";
+        const h1 = document.querySelector("h1")?.textContent?.trim() || "";
+        const combined = `${h1} ${subtitle}`.toLowerCase();
+
+        for (const v of values) {
+          if (combined.includes(v.toLowerCase())) {
+            return { matched: true, selectedText: combined };
+          }
+        }
+
+        return { matched: false, selectedText: combined };
+      },
+      { type: variantType, values: targetValues },
+    );
+
+    // Final fallback: also check URL query or path segments
+    const currentUrl = decodeURIComponent(page.url()).toLowerCase();
+    const urlHasMatch = targetValues.some((v) => currentUrl.includes(v.toLowerCase()));
+
+    if (!validation.matched && !urlHasMatch) {
+      throw new Error(
+        `REQUIRED_VARIANT_NOT_FOUND: ${displayName} ${targetValues.join("/")} ` +
+        `(page shows "${validation.selectedText}" — requested variant not available)`,
+      );
     }
   }
 
@@ -871,6 +923,13 @@ export class ReebeloSearchService {
       if (!candidateNormalized.includes(word)) {
         return false;
       }
+    }
+
+    // Strict model modifier check: "plus" / "+"
+    const queryHasPlus = cleanQuery.includes("+");
+    const candidateHasPlus = cleanCandidate.includes("+");
+    if (queryHasPlus !== candidateHasPlus) {
+      return false;
     }
 
     return true;

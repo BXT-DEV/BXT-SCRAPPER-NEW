@@ -513,6 +513,13 @@ export class GeminiMatcherService {
       }
     }
 
+    // Strict model modifier check: "plus" / "+"
+    const sourceHasPlus = sourceLower.replace(/\bplus\b/g, "+").includes("+");
+    const targetHasPlus = targetLower.replace(/\bplus\b/g, "+").includes("+");
+    if (sourceHasPlus !== targetHasPlus) {
+      return { passed: false, reason: `Model modifier mismatch: Plus vs Non-Plus` };
+    }
+
     return { passed: true, reason: "Model check passed" };
   }
 
